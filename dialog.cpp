@@ -111,15 +111,21 @@ void Dialog::timeout()
     //LONG            lReturn;
     DWORD           dwAP;
     DWORD dwsend, dwrecv;
+    uint8_t buf[20], cardCtrl[20];
 
     lReturn = SCardConnect( hSC,
       &(arr[0]),
-    //(LPCTSTR)"Rainbow Technologies SCR3531 0",
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_T1,
     &hCardHandle,
     &dwAP );
 
+//    lReturn = SCardConnect( hSC,
+//      &(arr[0]),
+//    SCARD_SHARE_DIRECT,
+//    SCARD_PROTOCOL_UNDEFINED,
+//    &hCardHandle,
+//    &dwAP );
 
 
     if ( SCARD_S_SUCCESS != lReturn )
@@ -129,6 +135,94 @@ void Dialog::timeout()
         Pal.setColor(QPalette::Background, Qt::red);
     }
     else{
+
+        uint8_t cmdBuf[6];
+        cmdBuf[0] = 0xe0;
+        cmdBuf[1] = 0x00;
+        cmdBuf[2] = 0x00;
+        cmdBuf[3] = 0x24;
+        cmdBuf[4] = 0x00;
+
+        lReturn = SCardControl( hCardHandle,
+                                SCARD_CTL_CODE(3500),
+                                &(cmdBuf[0]),
+                                5,
+                                &(cardCtrl[0]),
+                                20,
+                                &dwrecv );
+        if ( SCARD_S_SUCCESS != lReturn ){
+            qDebug("Failed SCardControl");
+        }
+        else{
+            if(dwrecv == 9){
+                //QString recvStr;
+                //recvStr = QString::number(dwrecv) + ": ";
+                //for(int i=0; i<dwrecv; i++){
+                //    recvStr += QString::number(cardCtrl[i], 16) + " ";
+                //}
+                //qDebug(qPrintable(recvStr));
+            }
+        }
+
+
+        uint8_t cardCtrlPolling[20];
+        cmdBuf[0] = 0xe0;
+        cmdBuf[1] = 0x00;
+        cmdBuf[2] = 0x00;
+        cmdBuf[3] = 0x23;
+        cmdBuf[4] = 0x00;
+
+        lReturn = SCardControl( hCardHandle,
+                                SCARD_CTL_CODE(3500),
+                                &(cmdBuf[0]),
+                                5,
+                                &(cardCtrlPolling[0]),
+                                20,
+                                &dwrecv );
+        if ( SCARD_S_SUCCESS != lReturn ){
+            qDebug("Failed SCardControl");
+        }
+        else{
+            //if(dwrecv == 9){
+                QString recvStr = "auto polling settings: ";
+                recvStr += QString::number(dwrecv) + ": ";
+                for(int i=0; i<dwrecv; i++){
+                    recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+                }
+                qDebug(qPrintable(recvStr));
+            //}
+        }
+
+//        cmdBuf[0] = 0xe0;
+//        cmdBuf[1] = 0x00;
+//        cmdBuf[2] = 0x00;
+//        cmdBuf[3] = 0x23;
+//        cmdBuf[4] = 0x01;
+//        cmdBuf[5] = 0x8B;
+
+//        lReturn = SCardControl( hCardHandle,
+//                                SCARD_CTL_CODE(3500),
+//                                &(cmdBuf[0]),
+//                                6,
+//                                &(cardCtrlPolling[0]),
+//                                20,
+//                                &dwrecv );
+//        if ( SCARD_S_SUCCESS != lReturn ){
+//            qDebug("Failed SCardControl");
+//        }
+//        else{
+//            //if(dwrecv == 9){
+//                QString recvStr = "auto polling settings resposnse: ";
+//                recvStr += QString::number(dwrecv) + ": ";
+//                for(int i=0; i<dwrecv; i++){
+//                    recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+//                }
+//                qDebug(qPrintable(recvStr));
+//            //}
+//        }
+
+
+
         // Use the connection.
         // Display the active protocol.
         switch ( dwAP )
@@ -155,8 +249,9 @@ void Dialog::timeout()
             CmdBytes.bP2 = 0x00;
             CmdBytes.bP3 = 0x00;
 
-            uint8_t buf[20];
+
             dwsend =  sizeof(CmdBytes);
+            dwrecv = 20;
             lReturn = SCardTransmit(hCardHandle,
                                     SCARD_PCI_T1,
                                     (LPCBYTE)&CmdBytes,
@@ -208,7 +303,13 @@ void Dialog::timeout()
                             lwi->setData(Qt::UserRole, (int)tcd);
 
                         }
-                        tcd->lastSeenTimeList.push_front(QTime::currentTime());
+                        TConnectionDescr *connDescr = new TConnectionDescr;
+                        connDescr->time = QTime::currentTime();
+                        connDescr->maxTxSpeed = cardCtrl[5];
+                        connDescr->currentTxSpeed = cardCtrl[6];
+                        connDescr->maxRxSpeed = cardCtrl[7];
+                        connDescr->currentRxSpeed = cardCtrl[8];
+                        tcd->connList.push_front(*connDescr);
                         lwi->setSelected(true);
                         on_listWidget_currentRowChanged(lwInd);
                     }
@@ -237,6 +338,8 @@ void Dialog::timeout()
             break;
         }
 
+
+
         lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
         if ( SCARD_S_SUCCESS != lReturn )
         {
@@ -254,11 +357,6 @@ void Dialog::timeout()
 
 }
 
-void Dialog::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
-{
-    //qDebug("curItemChanged");
-}
-
 void Dialog::on_listWidget_currentRowChanged(int currentRow)
 {
     if(currentRow == -1)
@@ -269,15 +367,20 @@ void Dialog::on_listWidget_currentRowChanged(int currentRow)
     str += "UID: " + tcd->uidStr + "\n";
     str += "UID len:" + QString::number(tcd->uidBytesLen) + " bytes\n";
     str += "last seen, delta: \n";
-    int count = tcd->lastSeenTimeList.size();
+    int count = tcd->connList.size();
     for(int i=0; i<count; i++){
-        QTime tt = tcd->lastSeenTimeList.at(i);
+        QTime tt = tcd->connList.at(i).time;
         QTime ttNext = tt;
         if((i+1)<=(count-1)){
-            ttNext = tcd->lastSeenTimeList.at(i+1);
+            ttNext = tcd->connList.at(i+1).time;
         }
         int tDelta = tt.msecsSinceStartOfDay()-ttNext.msecsSinceStartOfDay();
-        str += tt.toString("HH:mm:ss:zzz") + "  " + QString::number(tDelta) + "\n";
+        str += tt.toString("HH:mm:ss:zzz") + "  " + QString::number(tDelta) + "    ";
+        str += "mt:" + QString::number(tcd->connList.at(i).maxTxSpeed, 16) + "  ";
+        str += "ct:" + QString::number(tcd->connList.at(i).currentTxSpeed, 16) + "  ";
+        str += "mr:" + QString::number(tcd->connList.at(i).maxRxSpeed, 16) + "  ";
+        str += "cr:" + QString::number(tcd->connList.at(i).currentRxSpeed, 16) + "  ";
+        str += "\n";
     }
 
     ui->textEdit->setText(str);

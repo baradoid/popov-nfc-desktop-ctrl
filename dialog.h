@@ -11,11 +11,20 @@ class Dialog;
 }
 
 typedef struct {
+    uint8_t maxTxSpeed;
+    uint8_t currentTxSpeed;
+    uint8_t maxRxSpeed;
+    uint8_t currentRxSpeed;
+    QTime time;
+} TConnectionDescr;
+
+typedef struct {
     uint64_t uid;
     uint8_t uidBytesLen;
     QString uidStr;
-    QList<QTime> lastSeenTimeList;
+    QList<TConnectionDescr> connList;
 } TCardDescription;
+
 class Dialog : public QDialog
 {
     Q_OBJECT
@@ -31,7 +40,6 @@ private:
     SCARDCONTEXT    hSC;
 private slots:
     void timeout();
-    void on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
     void on_listWidget_currentRowChanged(int currentRow);
 };
 
