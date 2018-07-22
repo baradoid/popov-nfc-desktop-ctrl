@@ -14,7 +14,7 @@ typedef struct {
     uint64_t uid;
     uint8_t uidBytesLen;
     QString uidStr;
-    QTime lastSeenTime;
+    QList<QTime> lastSeenTimeList;
 } TCardDescription;
 class Dialog : public QDialog
 {

@@ -135,11 +135,11 @@ void Dialog::timeout()
         {
         case SCARD_PROTOCOL_T0:
 
-            qDebug("Active protocol T0\n");
+            //qDebug("Active protocol T0\n");
             break;
         case SCARD_PROTOCOL_T1:
             Pal.setColor(QPalette::Background, Qt::green);
-            qDebug("Active protocol T1\n");
+            //qDebug("Active protocol T1\n");
 
             struct {
                 BYTE
@@ -184,7 +184,7 @@ void Dialog::timeout()
                         else if(dwrecv == 6)
                             uidStr.sprintf("0x%08llX", uid);
                         //QString uidStr = qPrintable(QString::number(uid, 16));
-                        qDebug(qPrintable(uidStr));
+                        //qDebug(qPrintable(uidStr));
 
                         bool bExist = false;
                         int lwInd = 0;
@@ -208,7 +208,7 @@ void Dialog::timeout()
                             lwi->setData(Qt::UserRole, (int)tcd);
 
                         }
-                        tcd->lastSeenTime = QTime::currentTime();
+                        tcd->lastSeenTimeList.push_front(QTime::currentTime());
                         lwi->setSelected(true);
                         on_listWidget_currentRowChanged(lwInd);
                     }
@@ -226,7 +226,7 @@ void Dialog::timeout()
                 }
             }
             else{
-                qDebug("Failed read\n");
+                //qDebug("Failed read\n");
             }
 
             break;
@@ -256,8 +256,7 @@ void Dialog::timeout()
 
 void Dialog::on_listWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
-    qDebug("curItemChanged");
-
+    //qDebug("curItemChanged");
 }
 
 void Dialog::on_listWidget_currentRowChanged(int currentRow)
@@ -269,10 +268,17 @@ void Dialog::on_listWidget_currentRowChanged(int currentRow)
     QString str;
     str += "UID: " + tcd->uidStr + "\n";
     str += "UID len:" + QString::number(tcd->uidBytesLen) + " bytes\n";
-    str += "last seen: " + tcd->lastSeenTime.toString();
+    str += "last seen, delta: \n";
+    int count = tcd->lastSeenTimeList.size();
+    for(int i=0; i<count; i++){
+        QTime tt = tcd->lastSeenTimeList.at(i);
+        QTime ttNext = tt;
+        if((i+1)<=(count-1)){
+            ttNext = tcd->lastSeenTimeList.at(i+1);
+        }
+        int tDelta = tt.msecsSinceStartOfDay()-ttNext.msecsSinceStartOfDay();
+        str += tt.toString("HH:mm:ss:zzz") + "  " + QString::number(tDelta) + "\n";
+    }
+
     ui->textEdit->setText(str);
-
-
-
-
 }
