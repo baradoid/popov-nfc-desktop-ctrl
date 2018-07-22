@@ -22,6 +22,8 @@ typedef struct {
     uint64_t uid;
     uint8_t uidBytesLen;
     QString uidStr;
+    bool bSeenOnLastPoll;
+    QTime currentSessionStart;
     QList<TConnectionDescr> connList;
 } TCardDescription;
 
@@ -38,6 +40,12 @@ private:
     QTimer timer;
     QString readerName, readerName2;
     SCARDCONTEXT    hSC;
+
+    void buzzerGetStatus();
+    void buzzerSetCtrl(uint8_t buzDuration);
+
+    void ledBuzIndSet(bool bEventBuzzer);
+    void ledBuzIndGetStatus();
 private slots:
     void timeout();
     void on_listWidget_currentRowChanged(int currentRow);
