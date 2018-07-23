@@ -93,60 +93,151 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QGroupBox" name="groupBox">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>50</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Settings</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-        </property>
-        <widget class="QLabel" name="label_2">
-         <property name="geometry">
-          <rect>
-           <x>70</x>
-           <y>20</y>
-           <width>101</width>
-           <height>16</height>
-          </rect>
+       <widget class="QWidget" name="widget_3" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="leftMargin">
+          <number>0</number>
          </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>16777215</height>
-          </size>
+         <property name="topMargin">
+          <number>0</number>
          </property>
-         <property name="text">
-          <string>Long press delta, ms</string>
+         <property name="bottomMargin">
+          <number>0</number>
          </property>
-        </widget>
-        <widget class="QLineEdit" name="lineEditLongPressDelta">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>20</y>
-           <width>50</width>
-           <height>17</height>
-          </rect>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>50</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>2000</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
+         <item>
+          <widget class="QGroupBox" name="groupBox">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>Settings</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+           <widget class="QLabel" name="label_2">
+            <property name="geometry">
+             <rect>
+              <x>60</x>
+              <y>20</y>
+              <width>81</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Long press, ms</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="lineEditLongPressDelta">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>20</y>
+              <width>41</width>
+              <height>17</height>
+             </rect>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>50</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>2000</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_2">
+           <property name="maximumSize">
+            <size>
+             <width>160</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>TCP Server</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <widget class="QWidget" name="widget_4" native="true">
+              <property name="maximumSize">
+               <size>
+                <width>150</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLineEdit" name="lineEditPort">
+                 <property name="maximumSize">
+                  <size>
+                   <width>75</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_3">
+                 <property name="text">
+                  <string>port</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEditTcpClientsCount">
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_4">
+                 <property name="text">
+                  <string>Clients</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item>

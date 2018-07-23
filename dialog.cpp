@@ -4,12 +4,23 @@
 
 Dialog::Dialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::Dialog)
+    ui(new Ui::Dialog),
+    settings("murinets", "popov-nfc")
 {
     ui->setupUi(this);
 
     ui->lineEditLongPressDelta->setValidator(new QIntValidator(0,10000));
     ui->progressBar->setValue(0);
+
+    int port = settings.value("port", 3600).toInt();
+    ui->lineEditPort->setText(QString::number(port));
+    ui->lineEditPort->setValidator(new QIntValidator(0,65535, this));
+
+    int longPressThresh = settings.value("longPressThresh", 2000).toInt();
+    ui->lineEditLongPressDelta->setText(QString::number(longPressThresh));
+    ui->lineEditLongPressDelta->setValidator(new QIntValidator(0,10000, this));
+
+    ui->lineEditTcpClientsCount->setText("0");
 
     tcpServ = new QTcpServer(this);
     connect(tcpServ, SIGNAL(newConnection()), this, SLOT(handleNewTcpConnection()));
@@ -160,6 +171,12 @@ Dialog::Dialog(QWidget *parent) :
 
 Dialog::~Dialog()
 {
+    int port = ui->lineEditPort->text().toInt();
+    settings.setValue("port", port);
+
+    int longPressThresh = ui->lineEditLongPressDelta->text().toInt();
+    settings.setValue("longPressThresh", longPressThresh);
+
     delete ui;
 }
 
@@ -197,9 +214,16 @@ void Dialog::timeout()
         for(int i=0; i<ui->listWidget->count(); i++){
             QListWidgetItem *wi = ui->listWidget->item(i);
             TCardDescription *tc = (TCardDescription*)wi->data(Qt::UserRole).toInt();
+            if(tc->bSeenOnLastPoll == true){
+                for(int i=0; i<clientSockList.size(); i++){
+                    clientSockList[i]->write(qPrintable(tc->uidStr+" "));
+                    clientSockList[i]->write(qPrintable(QString::number(0)+"\n\n"));
+                }
+            }
             tc->bSeenOnLastPoll = false;
         }
         ui->progressBar->setValue(0);
+
     }
     else{
 
@@ -364,6 +388,11 @@ void Dialog::timeout()
                             qDebug("delta: %d %d", deltaElapsed, prcnt);
                             ui->progressBar->setValue(prcnt);
                             //qDebug("delta ch %d", ui->lineEditLongPressDelta->text().toInt());
+
+                            for(int i=0; i<clientSockList.size(); i++){
+                                clientSockList[i]->write(qPrintable(uidStr+" "));
+                                clientSockList[i]->write(qPrintable(QString::number(prcnt)+"\n\n"));
+                            }
                         }
                         tcd->bSeenOnLastPoll = true;
 
@@ -376,6 +405,8 @@ void Dialog::timeout()
                         tcd->connList.push_front(*connDescr);
                         lwi->setSelected(true);
                         on_listWidget_currentRowChanged(lwInd);
+
+
 
                     }
                     else{
@@ -666,6 +697,17 @@ void Dialog::ledBuzIndGetStatus()
 
 void Dialog::handleNewTcpConnection()
 {
+    while(tcpServ->hasPendingConnections()){
+        QTcpSocket *ts = tcpServ->nextPendingConnection();
+        clientSockList.append(ts);
+        //connect(ts, SIGNAL(disconnected()), this, SLOT(handleDisconnected()));
+        QObject::connect(ts, &QTcpSocket::disconnected, [=](){
+            clientSockList.removeOne(ts);
+            ui->lineEditTcpClientsCount->setText(QString::number(clientSockList.size()));
+        });
+    }
     //tcpServ->nextPendingConnection();
 
+    //qDebug("new conn");
+    ui->lineEditTcpClientsCount->setText(QString::number(clientSockList.size()));
 }

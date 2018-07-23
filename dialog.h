@@ -8,6 +8,9 @@
 #include <QListWidgetItem>
 
 #include <QTcpServer>
+#include <QTcpSocket>
+
+#include <QSettings>
 
 namespace Ui {
 class Dialog;
@@ -51,6 +54,10 @@ private:
     void ledBuzIndGetStatus();
 
     QTcpServer *tcpServ;
+    QList<QTcpSocket*> clientSockList;
+
+    QSettings settings;
+
 private slots:
     void timeout();
     void on_listWidget_currentRowChanged(int currentRow);
