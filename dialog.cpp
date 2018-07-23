@@ -11,6 +11,11 @@ Dialog::Dialog(QWidget *parent) :
     ui->lineEditLongPressDelta->setValidator(new QIntValidator(0,10000));
     ui->progressBar->setValue(0);
 
+    tcpServ = new QTcpServer(this);
+    connect(tcpServ, SIGNAL(newConnection()), this, SLOT(handleNewTcpConnection()));
+    tcpServ->listen(QHostAddress::Any, 3600);
+
+
     //ui->listWidget->setAttribute( Qt::WA_TransparentForMouseEvents );
 
     LONG            lReturn;
@@ -656,5 +661,11 @@ void Dialog::ledBuzIndGetStatus()
     {
         qDebug("Failed SCardDisconnect\n");
     }
+
+}
+
+void Dialog::handleNewTcpConnection()
+{
+    //tcpServ->nextPendingConnection();
 
 }

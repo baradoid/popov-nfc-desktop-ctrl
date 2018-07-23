@@ -6,6 +6,9 @@
 #include <winscard.h>
 #include <QTime>
 #include <QListWidgetItem>
+
+#include <QTcpServer>
+
 namespace Ui {
 class Dialog;
 }
@@ -46,9 +49,12 @@ private:
 
     void ledBuzIndSet(bool bEventBuzzer);
     void ledBuzIndGetStatus();
+
+    QTcpServer *tcpServ;
 private slots:
     void timeout();
     void on_listWidget_currentRowChanged(int currentRow);
+    void handleNewTcpConnection();
 };
 
 #endif // DIALOG_H
