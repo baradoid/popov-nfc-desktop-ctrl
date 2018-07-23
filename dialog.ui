@@ -13,6 +13,12 @@
   <property name="windowTitle">
    <string>Popov Card Reader</string>
   </property>
+  <property name="statusTip">
+   <string notr="true"/>
+  </property>
+  <property name="whatsThis">
+   <string notr="true"/>
+  </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <widget class="QWidget" name="widget_2" native="true">
@@ -216,6 +222,9 @@
                </item>
                <item>
                 <widget class="QLineEdit" name="lineEditTcpClientsCount">
+                 <property name="whatsThis">
+                  <string notr="true"/>
+                 </property>
                  <property name="alignment">
                   <set>Qt::AlignCenter</set>
                  </property>

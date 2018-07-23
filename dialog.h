@@ -44,7 +44,8 @@ public:
 private:
     Ui::Dialog *ui;
     QTimer timer;
-    QString readerName, readerName2;
+    QStringList readerList;
+    int iSelectedReader;
     SCARDCONTEXT    hSC;
 
     void buzzerGetStatus();
@@ -52,6 +53,9 @@ private:
 
     void ledBuzIndSet(bool bEventBuzzer);
     void ledBuzIndGetStatus();
+
+    void getAutoPICCPolling();
+    void getReadersList();
 
     QTcpServer *tcpServ;
     QList<QTcpSocket*> clientSockList;

@@ -5,9 +5,15 @@
 Dialog::Dialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
+    iSelectedReader(-1),
     settings("murinets", "popov-nfc")
 {
     ui->setupUi(this);
+
+    Qt::WindowFlags flags = windowFlags();
+    Qt::WindowFlags helpFlag = Qt::WindowContextHelpButtonHint;
+    flags = flags & (~helpFlag);
+    setWindowFlags(flags);
 
     ui->lineEditLongPressDelta->setValidator(new QIntValidator(0,10000));
     ui->progressBar->setValue(0);
@@ -29,138 +35,30 @@ Dialog::Dialog(QWidget *parent) :
 
     //ui->listWidget->setAttribute( Qt::WA_TransparentForMouseEvents );
 
-    LONG            lReturn;
-    // Establish the context.
-    lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
-                                    NULL,
-                                    NULL,
-                                    &hSC);
-    if ( SCARD_S_SUCCESS != lReturn )
-        printf("Failed SCardEstablishContext\n");
-    else
-    {
 
-        //QString readerName, readerName2;
-        LPTSTR          pmszReaders = NULL;
-        LPTSTR          pReader;
-        LONG            lReturn, lReturn2;
-        DWORD           cch = SCARD_AUTOALLOCATE;
-        // Retrieve the list the readers.
-        // hSC was set by a previous call to SCardEstablishContext.
-        lReturn = SCardListReaders(hSC, NULL, (LPTSTR)&pmszReaders, &cch );
 
-        switch( lReturn )
-        {
-        case SCARD_E_NO_READERS_AVAILABLE:
-        printf("Reader is not in groups.\n");
-        // Take appropriate action.
-        // ...
-        break;
-        case SCARD_S_SUCCESS:
-            // Do something with the multi string of readers.
-            // Output the values.
-            // A double-null terminates the list of values.
-            pReader = pmszReaders;
-            char ch;
-            while ( '\0' != *pReader )
-            {
-                QString ss;
-                //ss.append()
-                ch = *(pReader)                        ;
-                pReader++;
-                readerName.append(ch);
-                // Display the value.
-                //qDebug("Reader: %s\n", pReader );
-                // Advance to the next value.
-                //pReader = pReader + wcslen((wchar_t  *)pReader) + 1;
-            }
-            pReader++;
-            while ( '\0' != *pReader )
-            {
-                QString ss;
-                //ss.append()
-                ch = *(pReader)                        ;
-                pReader++;
-                readerName2.append(ch);
-                // Display the value.
-                //qDebug("Reader: %s\n", pReader );
-                // Advance to the next value.
-                //pReader = pReader + wcslen((wchar_t  *)pReader) + 1;
-            }
-            // F
-            // Free the memory.
-            lReturn2 = SCardFreeMemory( hSC,
-                                       pmszReaders );
-            if ( SCARD_S_SUCCESS != lReturn2 )
-                printf("Failed SCardFreeMemory\n");
+
+    getReadersList();
+
+    for(int i=0; i<readerList.size(); i++){
+        if(readerList[i].contains("PICC")){
+            iSelectedReader = i;
             break;
-        default:
-        printf("Failed SCardListReaders\n");
-        // Take appropriate action.
-        // ...
-        break;
         }
-
-
-        SCARDHANDLE     hCardHandle;
-        uint8_t cmdBuf[6], cardCtrlPolling[20];
-        cmdBuf[0] = 0xe0;
-        cmdBuf[1] = 0x00;
-        cmdBuf[2] = 0x00;
-        cmdBuf[3] = 0x23;
-        cmdBuf[4] = 0x00;
-
-        uint32_t dwrecv, dwAP;
-
-        wchar_t arr[500];
-        memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-        readerName.toWCharArray(&(arr[0]));
-
-        lReturn = SCardConnect( hSC,
-          &(arr[0]),
-        SCARD_SHARE_DIRECT,
-        SCARD_PROTOCOL_UNDEFINED,
-        &hCardHandle,
-        (DWORD*)&dwAP );
-
-
-        lReturn = SCardControl( hCardHandle,
-                                SCARD_CTL_CODE(3500),
-                                &(cmdBuf[0]),
-                                5,
-                                &(cardCtrlPolling[0]),
-                                20,
-                                (DWORD*)&dwrecv );
-        if ( SCARD_S_SUCCESS != lReturn ){
-            qDebug("Failed SCardControl");
-        }
-        else{
-            //if(dwrecv == 9){
-                QString recvStr = "auto polling settings: ";
-                recvStr += QString::number(dwrecv) + ": ";
-                for(uint32_t i=0; i<dwrecv; i++){
-                    recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
-                }
-                qDebug(qPrintable(recvStr));
-            //}
-        }
-
-        lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
-        if ( SCARD_S_SUCCESS != lReturn )
-        {
-            qDebug("Failed SCardDisconnect\n");
-        }
-
-        buzzerSetCtrl(0x0);
-        buzzerGetStatus();
-
-
-        ledBuzIndSet(false);
-        ledBuzIndGetStatus();
-
-
     }
 
+    if(iSelectedReader == -1)
+        return;
+
+
+    getAutoPICCPolling();
+
+    buzzerSetCtrl(0x0);
+    buzzerGetStatus();
+
+
+    ledBuzIndSet(false);
+    ledBuzIndGetStatus();
 
 
     QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(timeout()));
@@ -191,7 +89,8 @@ void Dialog::timeout()
     //qDebug("%s", qPrintable(readerName));
     wchar_t arr[500];
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerName.toWCharArray(&(arr[0]));
+    readerList[iSelectedReader].toWCharArray(&(arr[0]));
+
     SCARDHANDLE     hCardHandle;
     //LONG            lReturn;    
     DWORD dwsend, dwrecv, dwAP;
@@ -485,7 +384,7 @@ void Dialog::buzzerSetCtrl(uint8_t buzDuration)
 
     wchar_t arr[500];
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerName.toWCharArray(&(arr[0]));
+    readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
       &(arr[0]),
@@ -539,7 +438,7 @@ void Dialog::buzzerGetStatus()
 
     wchar_t arr[500];
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerName.toWCharArray(&(arr[0]));
+    readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
       &(arr[0]),
@@ -594,7 +493,7 @@ void Dialog::ledBuzIndSet(bool bEventBuzzer)
 
     wchar_t arr[500];
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerName.toWCharArray(&(arr[0]));
+    readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
       &(arr[0]),
@@ -650,7 +549,7 @@ void Dialog::ledBuzIndGetStatus()
 
     wchar_t arr[500];
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerName.toWCharArray(&(arr[0]));
+    readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
       &(arr[0]),
@@ -710,4 +609,115 @@ void Dialog::handleNewTcpConnection()
 
     //qDebug("new conn");
     ui->lineEditTcpClientsCount->setText(QString::number(clientSockList.size()));
+}
+
+void Dialog::getAutoPICCPolling()
+{
+    SCARDHANDLE     hCardHandle;
+    uint8_t cmdBuf[6], cardCtrlPolling[20];
+    LONG    lReturn;
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x23;
+    cmdBuf[4] = 0x00;
+
+    uint32_t dwrecv, dwAP;
+
+    wchar_t arr[500];
+    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
+    readerList[iSelectedReader].toWCharArray(&(arr[0]));
+
+    lReturn = SCardConnect( hSC, &(arr[0]),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]),
+                            5,
+                            &(cardCtrlPolling[0]),
+                            20,
+                            (DWORD*)&dwrecv );
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardControl");
+    }
+    else{
+        //if(dwrecv == 9){
+            QString recvStr = "auto polling settings: ";
+            recvStr += QString::number(dwrecv) + ": ";
+            for(uint32_t i=0; i<dwrecv; i++){
+                recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+            }
+            qDebug(qPrintable(recvStr));
+        //}
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
+}
+
+
+void Dialog::getReadersList()
+{
+    LONG            lReturn;
+    // Establish the context.
+    lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
+                                    NULL,
+                                    NULL,
+                                    &hSC);
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardEstablishContext");
+        return;
+    }
+
+    //QString readerName, readerName2;
+    LPTSTR          pmszReaders = NULL;
+    LPTSTR          pReader;
+    DWORD           cch = SCARD_AUTOALLOCATE;
+    // Retrieve the list the readers.
+    // hSC was set by a previous call to SCardEstablishContext.
+    lReturn = SCardListReaders(hSC, NULL, (LPTSTR)&pmszReaders, &cch );
+    if(lReturn != SCARD_S_SUCCESS){
+        qDebug("Failed SCardListReaders");
+        return;
+    }
+
+    // Do something with the multi string of readers.
+    // Output the values.
+    // A double-null terminates the list of values.
+
+    pReader = pmszReaders;
+    char ch;
+    while ( '\0' != *pReader )
+    {
+        QString rname;
+        while ( '\0' != *pReader )
+        {
+            //QString ss;
+            //ss.append()
+            ch = *(pReader)                        ;
+            pReader++;
+            rname.append(ch);
+            // Display the value.
+            // Advance to the next value.
+            //pReader = pReader + wcslen((wchar_t  *)pReader) + 1;
+        }
+        qDebug("Reader: %s", qPrintable(rname));
+        readerList.append(rname);
+        pReader++;
+    }
+
+    // Free the memory.
+    lReturn = SCardFreeMemory( hSC,
+                                pmszReaders );
+    if ( SCARD_S_SUCCESS != lReturn )
+        qDebug("Failed SCardFreeMemory\n");
+
 }
