@@ -84,12 +84,41 @@ void Dialog::timeout()
 {
     QPalette Pal(palette());
 
+
+    uint32_t rv;
+    SCARD_READERSTATE *rgReaderStates_t = NULL;
+    SCARD_READERSTATE rgReaderStates[2];
+    int nbReaders = 2;
+
+    rgReaderStates[0].szReader = readerList[iSelectedReader].toLocal8Bit().constData();
+    rgReaderStates[0].dwCurrentState = SCARD_STATE_UNAWARE;
+    rgReaderStates[0].cbAtr = sizeof rgReaderStates_t[0].rgbAtr;
+
+    rgReaderStates[1].szReader = "\\\\?PnP?\\Notification";
+    rgReaderStates[1].dwCurrentState = SCARD_STATE_UNAWARE;
+
+
+
+
+    rv = SCardGetStatusChange(hSC,  100, rgReaderStates, nbReaders);
+
+    if(rv == SCARD_S_SUCCESS){
+        qDebug("SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x", rgReaderStates[0].dwEventState , rgReaderStates[1].dwEventState);
+
+    }
+    else if(rv == SCARD_E_TIMEOUT)
+        qDebug("SCardGetStatusChange SCARD_E_TIMEOUT");
+    else
+        qDebug("SCardGetStatusChange %x", rv);
+
+
+
     LONG            lReturn;
     //qDebug("%s", qPrintable(readerName));
 
     SCARDHANDLE     hCardHandle;  
     DWORD dwsend, dwrecv, dwAP;
-    uint8_t buf[20], cardCtrl[50];
+    uint8_t buf[50], cardCtrl[50];
 
     lReturn = SCardConnect( hSC,
                             readerList[iSelectedReader].toLocal8Bit().constData(),
@@ -179,160 +208,163 @@ void Dialog::timeout()
 
 
 
-        // Use the connection.
-        // Display the active protocol.
-        switch ( dwAP )
-        {
-        case SCARD_PROTOCOL_T0:
+    // Use the connection.
+    // Display the active protocol.
+    switch ( dwAP )
+    {
+    case SCARD_PROTOCOL_T0:
 
-            qDebug("Active protocol T0\n");
-            break;
-        case SCARD_PROTOCOL_T1:
-            Pal.setColor(QPalette::Background, Qt::green);
-            qDebug("Active protocol T1\n");
+        qDebug("Active protocol T0\n");
+        break;
 
-            struct {
-                BYTE
+
+    case SCARD_PROTOCOL_T1:
+        Pal.setColor(QPalette::Background, Qt::green);
+        qDebug("Active protocol T1\n");
+
+        struct {
+            BYTE
                     bCla,   // the instruction class
                     bIns,   // the instruction code
                     bP1,    // parameter to the instruction
                     bP2,    // parameter to the instruction
                     bP3;    // size of I/O transfer
-            } CmdBytes;
-            CmdBytes.bCla = 0xff;
-            CmdBytes.bIns = 0xCA;
-            CmdBytes.bP1 = 0x00;
-            CmdBytes.bP2 = 0x00;
-            CmdBytes.bP3 = 0x00;
+        } CmdBytes;
+        CmdBytes.bCla = 0xff;
+        CmdBytes.bIns = 0xCA;
+        CmdBytes.bP1 = 0x00;
+        CmdBytes.bP2 = 0x00;
+        CmdBytes.bP3 = 0x00;
 
 
-            dwsend =  sizeof(CmdBytes);
-            dwrecv = 20;
-            lReturn = SCardTransmit(hCardHandle,
-                                    SCARD_PCI_T1,
-                                    (LPCBYTE)&CmdBytes,
-                                    dwsend,
-                                    NULL,
-                                    &(buf[0]),
-                                    &dwrecv );
-            if ( SCARD_S_SUCCESS == lReturn ){
-                qDebug("read OK");
-                if((dwrecv==9) || (dwrecv==6)){
-                    uint16_t respCode = buf[dwrecv-2] | (buf[dwrecv-1]<<8);
-                    if(respCode == 0x90){
-                        uint64_t uid = 0;
-                        //uint64_t uidTemp = 0;
-                        for(uint32_t i=0; i<(dwrecv-2); i++){
-                            //uidTemp = ((uint64_t)buf[i])<<(i*8);
-                            uid |= ((uint64_t)buf[i]<<(i*8));
-                            //uidStr+= QString::number(buf2[i], 16) + " ";
-                        }
+        dwsend =  sizeof(CmdBytes);
+        dwrecv = 50;
+        lReturn = SCardTransmit(hCardHandle,
+                                SCARD_PCI_T1,
+                                (LPCBYTE)&CmdBytes,
+                                dwsend,
+                                NULL,
+                                &(buf[0]),
+                &dwrecv );
+        if ( SCARD_S_SUCCESS == lReturn ){
+            qDebug("read OK");
+            if((dwrecv==9) || (dwrecv==6)){
+                uint16_t respCode = buf[dwrecv-2] | (buf[dwrecv-1]<<8);
+                if(respCode == 0x90){
+                    uint64_t uid = 0;
+                    //uint64_t uidTemp = 0;
+                    for(uint32_t i=0; i<(dwrecv-2); i++){
+                        //uidTemp = ((uint64_t)buf[i])<<(i*8);
+                        uid |= ((uint64_t)buf[i]<<(i*8));
+                        //uidStr+= QString::number(buf2[i], 16) + " ";
+                    }
 
-                        QString uidStr;
-                        if(dwrecv == 9)
-                            uidStr.sprintf("0x%014llX", uid);
-                        else if(dwrecv == 6)
-                            uidStr.sprintf("0x%08llX", uid);
-                        //QString uidStr = qPrintable(QString::number(uid, 16));
-                        //qDebug(qPrintable(uidStr));
+                    QString uidStr;
+                    if(dwrecv == 9)
+                        uidStr.sprintf("0x%014llX", uid);
+                    else if(dwrecv == 6)
+                        uidStr.sprintf("0x%08llX", uid);
+                    //QString uidStr = qPrintable(QString::number(uid, 16));
+                    //qDebug(qPrintable(uidStr));
 
-                        bool bExist = false;
-                        int lwInd = 0;
-                        QListWidgetItem *lwi;
-                        TCardDescription *tcd;
-                        for(int i=0; i<ui->listWidget->count(); i++){
-                            QListWidgetItem *wi = ui->listWidget->item(i);
-                            TCardDescription *tc = (TCardDescription*)wi->data(Qt::UserRole).toInt();
-                            if(wi->text() == uidStr){
-                                bExist = true;
-                                lwInd = i;
-                                lwi = wi;
-                                tcd = tc;
-                                //tcd->bSeenOnLastPoll = true;
-                                //break;
-                            }
-                            else{
-                                tc->bSeenOnLastPoll = false;
-                            }
-                        }
-
-                        if(bExist == false){
-                            ui->listWidget->addItem(uidStr);
-                            lwi = ui->listWidget->item(ui->listWidget->count()-1);
-                            tcd = new TCardDescription;
-                            tcd->uid = uid;
-                            tcd->uidStr = uidStr;
-                            tcd->uidBytesLen = dwrecv - 2;
-                            tcd->bSeenOnLastPoll = false;
-                            lwi->setData(Qt::UserRole, (int)tcd);
-
-                        }
-
-                        if(tcd->bSeenOnLastPoll == false){
-                            tcd->currentSessionStart = QTime::currentTime();
+                    bool bExist = false;
+                    int lwInd = 0;
+                    QListWidgetItem *lwi;
+                    TCardDescription *tcd;
+                    for(int i=0; i<ui->listWidget->count(); i++){
+                        QListWidgetItem *wi = ui->listWidget->item(i);
+                        TCardDescription *tc = (TCardDescription*)wi->data(Qt::UserRole).toInt();
+                        if(wi->text() == uidStr){
+                            bExist = true;
+                            lwInd = i;
+                            lwi = wi;
+                            tcd = tc;
+                            //tcd->bSeenOnLastPoll = true;
+                            //break;
                         }
                         else{
-                            int deltaElapsed = tcd->currentSessionStart.elapsed();
-                            int deltaThresh = ui->lineEditLongPressDelta->text().toInt();
-                            int prcnt = ((float)deltaElapsed/deltaThresh)*100;
-                            if(prcnt > 100){
-                                prcnt = 100;
-                                Pal.setColor(QPalette::Background, Qt::blue);
-                            }
-                            qDebug("delta: %d %d", deltaElapsed, prcnt);
-                            ui->progressBar->setValue(prcnt);
-                            //qDebug("delta ch %d", ui->lineEditLongPressDelta->text().toInt());
-
-                            for(int i=0; i<clientSockList.size(); i++){
-                                clientSockList[i]->write(qPrintable(uidStr+" "));
-                                clientSockList[i]->write(qPrintable(QString::number(prcnt)+"\n\n"));
-                            }
+                            tc->bSeenOnLastPoll = false;
                         }
-                        tcd->bSeenOnLastPoll = true;
+                    }
 
-                        TConnectionDescr *connDescr = new TConnectionDescr;
-                        connDescr->time = QTime::currentTime();
-                        connDescr->maxTxSpeed = cardCtrl[5];
-                        connDescr->currentTxSpeed = cardCtrl[6];
-                        connDescr->maxRxSpeed = cardCtrl[7];
-                        connDescr->currentRxSpeed = cardCtrl[8];
-                        tcd->connList.push_front(*connDescr);
-                        lwi->setSelected(true);
-                        on_listWidget_currentRowChanged(lwInd);
+                    if(bExist == false){
+                        ui->listWidget->addItem(uidStr);
+                        lwi = ui->listWidget->item(ui->listWidget->count()-1);
+                        tcd = new TCardDescription;
+                        tcd->uid = uid;
+                        tcd->uidStr = uidStr;
+                        tcd->uidBytesLen = dwrecv - 2;
+                        tcd->bSeenOnLastPoll = false;
+                        lwi->setData(Qt::UserRole, (int)tcd);
 
+                    }
 
-
+                    if(tcd->bSeenOnLastPoll == false){
+                        tcd->currentSessionStart = QTime::currentTime();
                     }
                     else{
-                        qDebug("bad resp code: %x", respCode);
+                        int deltaElapsed = tcd->currentSessionStart.elapsed();
+                        int deltaThresh = ui->lineEditLongPressDelta->text().toInt();
+                        int prcnt = ((float)deltaElapsed/deltaThresh)*100;
+                        if(prcnt > 100){
+                            prcnt = 100;
+                            Pal.setColor(QPalette::Background, Qt::blue);
+                        }
+                        qDebug("delta: %d %d", deltaElapsed, prcnt);
+                        ui->progressBar->setValue(prcnt);
+                        //qDebug("delta ch %d", ui->lineEditLongPressDelta->text().toInt());
+
+                        for(int i=0; i<clientSockList.size(); i++){
+                            clientSockList[i]->write(qPrintable(uidStr+" "));
+                            clientSockList[i]->write(qPrintable(QString::number(prcnt)+"\n\n"));
+                        }
                     }
-    //                QString uidStr = "uid: ";
-    //                for(int i=0; i<dwrecv; i++){
-    //                    uidStr+= QString::number(buf2[i], 16) + " ";
-    //                }
-    //                qDebug(qPrintable(uidStr));
+                    tcd->bSeenOnLastPoll = true;
+
+                    TConnectionDescr *connDescr = new TConnectionDescr;
+                    connDescr->time = QTime::currentTime();
+                    connDescr->maxTxSpeed = cardCtrl[5];
+                    connDescr->currentTxSpeed = cardCtrl[6];
+                    connDescr->maxRxSpeed = cardCtrl[7];
+                    connDescr->currentRxSpeed = cardCtrl[8];
+                    tcd->connList.push_front(*connDescr);
+                    lwi->setSelected(true);
+                    on_listWidget_currentRowChanged(lwInd);
+
+
+
                 }
                 else{
-                    qDebug("recvd bad arrLen %ld : %x %x ", dwrecv, buf[dwrecv-2],buf[dwrecv-1]);
+                    qDebug("bad resp code: %x", respCode);
                 }
+                //                QString uidStr = "uid: ";
+                //                for(int i=0; i<dwrecv; i++){
+                //                    uidStr+= QString::number(buf2[i], 16) + " ";
+                //                }
+                //                qDebug(qPrintable(uidStr));
             }
-            else{                
-                qDebug("Failed read\n");
+            else{
+                qDebug("recvd bad arrLen %ld : %x %x ", dwrecv, buf[dwrecv-2],buf[dwrecv-1]);
             }
-
-            break;
-
-        case SCARD_PROTOCOL_UNDEFINED:
-        default:
-            qDebug("Active protocol unnegotiated or unknown\n");
-            break;
+        }
+        else{
+            qDebug("Failed read\n");
         }
 
-        lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
-        if ( SCARD_S_SUCCESS != lReturn )
-        {
-            qDebug("Failed SCardDisconnect\n");
-        }
+        break;
+
+    case SCARD_PROTOCOL_UNDEFINED:
+    default:
+        qDebug("Active protocol unnegotiated or unknown\n");
+        break;
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
+
 
 
     ui->widgetIndic->setAutoFillBackground(true);
@@ -679,7 +711,7 @@ void Dialog::getReadersList()
 {
     LONG            lReturn;
     // Establish the context.
-    lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
+    lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM,
                                     NULL,
                                     NULL,
                                     &hSC);
