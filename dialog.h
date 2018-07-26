@@ -16,7 +16,7 @@
 
 #if defined(Q_OS_LINUX)
 #include <PCSC/winscard.h>
-#define SCARD_CTL_CODE(code) (0x42000000+(code))
+#define SCARD_CTL_CODE(code) (0x42000000+(code-100))
 #elif defined(Q_OS_WIN)
 #include <winscard.h>
 #endif

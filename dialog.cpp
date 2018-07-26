@@ -36,13 +36,12 @@ Dialog::Dialog(QWidget *parent) :
     //ui->listWidget->setAttribute( Qt::WA_TransparentForMouseEvents );
 
 
-
-
     getReadersList();
 
     for(int i=0; i<readerList.size(); i++){
         if(readerList[i].contains("PICC")){
             iSelectedReader = i;
+            qDebug("select reader index %d", i);
             break;
         }
     }
@@ -87,27 +86,22 @@ void Dialog::timeout()
 
     LONG            lReturn;
     //qDebug("%s", qPrintable(readerName));
-    wchar_t arr[500];
-    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
-    SCARDHANDLE     hCardHandle;
-    //LONG            lReturn;    
+    SCARDHANDLE     hCardHandle;  
     DWORD dwsend, dwrecv, dwAP;
-    uint8_t buf[20], cardCtrl[20];
+    uint8_t buf[20], cardCtrl[50];
 
-    lReturn = SCardConnectA( hSC,
-     (LPCSTR) &(arr[0]),
+    lReturn = SCardConnect( hSC,
+                            readerList[iSelectedReader].toLocal8Bit().constData(),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_T1,
     &hCardHandle,
-    &dwAP );
+    (DWORD*)&dwAP );
 
-
-    if ( SCARD_S_SUCCESS != lReturn )
-    {
-        //qDebug("Failed SCardConnect\n");
-        //exit(1);  // Or other appropriate action.
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
         Pal.setColor(QPalette::Background, Qt::red);
 
         for(int i=0; i<ui->listWidget->count(); i++){
@@ -122,37 +116,38 @@ void Dialog::timeout()
             tc->bSeenOnLastPoll = false;
         }
         ui->progressBar->setValue(0);
+        return;
+    }
 
+
+
+    uint8_t cmdBuf[6];
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x24;
+    cmdBuf[4] = 0x00;
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]), 5, &(cardCtrl[0]),
+                            50, &dwrecv );
+    if ( lReturn != SCARD_S_SUCCESS ){
+        qDebug("Failed SCardControl %x", lReturn);
+        return;
     }
     else{
-
-        uint8_t cmdBuf[6];
-        cmdBuf[0] = 0xe0;
-        cmdBuf[1] = 0x00;
-        cmdBuf[2] = 0x00;
-        cmdBuf[3] = 0x24;
-        cmdBuf[4] = 0x00;
-
-        lReturn = SCardControl( hCardHandle,
-                                SCARD_CTL_CODE(3500),
-                                &(cmdBuf[0]),
-                                5,
-                                &(cardCtrl[0]),
-                                20,
-                                &dwrecv );
-        if ( SCARD_S_SUCCESS != lReturn ){
-            qDebug("Failed SCardControl");
+        qDebug("Success SCardControl %x", dwrecv);
+        //if(dwrecv == 9){
+        QString recvStr;
+        recvStr = QString::number(dwrecv) + ": ";
+        for(int i=0; i<dwrecv; i++){
+            recvStr += QString::number(cardCtrl[i], 16) + " ";
         }
-        else{
-            if(dwrecv == 9){
-                //QString recvStr;
-                //recvStr = QString::number(dwrecv) + ": ";
-                //for(int i=0; i<dwrecv; i++){
-                //    recvStr += QString::number(cardCtrl[i], 16) + " ";
-                //}
-                //qDebug(qPrintable(recvStr));
-            }
-        }
+        qDebug(qPrintable(recvStr));
+
+        //}
+    }
 
 //        cmdBuf[0] = 0xe0;
 //        cmdBuf[1] = 0x00;
@@ -190,11 +185,11 @@ void Dialog::timeout()
         {
         case SCARD_PROTOCOL_T0:
 
-            //qDebug("Active protocol T0\n");
+            qDebug("Active protocol T0\n");
             break;
         case SCARD_PROTOCOL_T1:
             Pal.setColor(QPalette::Background, Qt::green);
-            //qDebug("Active protocol T1\n");
+            qDebug("Active protocol T1\n");
 
             struct {
                 BYTE
@@ -221,7 +216,7 @@ void Dialog::timeout()
                                     &(buf[0]),
                                     &dwrecv );
             if ( SCARD_S_SUCCESS == lReturn ){
-                //qDebug("read OK");
+                qDebug("read OK");
                 if((dwrecv==9) || (dwrecv==6)){
                     uint16_t respCode = buf[dwrecv-2] | (buf[dwrecv-1]<<8);
                     if(respCode == 0x90){
@@ -322,14 +317,14 @@ void Dialog::timeout()
                 }
             }
             else{                
-                //qDebug("Failed read\n");
+                qDebug("Failed read\n");
             }
 
             break;
 
         case SCARD_PROTOCOL_UNDEFINED:
         default:
-            //qDebug("Active protocol unnegotiated or unknown\n");
+            qDebug("Active protocol unnegotiated or unknown\n");
             break;
         }
 
@@ -339,7 +334,6 @@ void Dialog::timeout()
             qDebug("Failed SCardDisconnect\n");
         }
 
-    }
 
     ui->widgetIndic->setAutoFillBackground(true);
     ui->widgetIndic->setPalette(Pal);
@@ -376,22 +370,25 @@ void Dialog::on_listWidget_currentRowChanged(int currentRow)
 
 void Dialog::buzzerSetCtrl(uint8_t buzDuration)
 {
+    qDebug("\nbuzzerSetCtrl");
     SCARDHANDLE     hCardHandle;
-    uint8_t cardCtrlPolling[20];
+    uint8_t cardCtrlPolling[50];
     LONG    lReturn;
 
     uint32_t dwrecv, dwAP;
 
-    wchar_t arr[500];
-    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerList[iSelectedReader].toWCharArray(&(arr[0]));
-
-    lReturn = SCardConnectA( hSC,
-      (LPCSTR)&(arr[0]),
+    lReturn = SCardConnect( hSC, readerList[iSelectedReader].toLocal8Bit().constData(),
     SCARD_SHARE_DIRECT,
-    SCARD_PROTOCOL_UNDEFINED,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
     (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
 
     uint8_t cmdBuf[6];
     cmdBuf[0] = 0xe0;
@@ -406,10 +403,10 @@ void Dialog::buzzerSetCtrl(uint8_t buzDuration)
                             &(cmdBuf[0]),
                             6,
                             &(cardCtrlPolling[0]),
-                            20,
+                            50,
                             (DWORD*)&dwrecv );
     if ( SCARD_S_SUCCESS != lReturn ){
-        qDebug("Failed SCardControl");
+        qDebug("Failed SCardControl %x", lReturn);
     }
     else{
         QString recvStr = "buzzer set ctrl resp: ";
@@ -430,22 +427,26 @@ void Dialog::buzzerSetCtrl(uint8_t buzDuration)
 
 void Dialog::buzzerGetStatus()
 {
+    qDebug("\nbuzzerGetStatus");
+
     SCARDHANDLE     hCardHandle;
-    uint8_t cardCtrlPolling[20];
+    uint8_t cardCtrlPolling[50];
     LONG    lReturn;
 
     uint32_t dwrecv, dwAP;
 
-    wchar_t arr[500];
-    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerList[iSelectedReader].toWCharArray(&(arr[0]));
-
-    lReturn = SCardConnect( hSC,
-      (LPCSTR)&(arr[0]),
+    lReturn = SCardConnect( hSC, readerList[iSelectedReader].toLocal8Bit().constData(),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
     (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
 
     uint8_t cmdBuf[6];
     cmdBuf[0] = 0xe0;
@@ -459,10 +460,10 @@ void Dialog::buzzerGetStatus()
                             &(cmdBuf[0]),
                             5,
                             &(cardCtrlPolling[0]),
-                            20,
+                            50,
                             (DWORD*)&dwrecv );
     if ( SCARD_S_SUCCESS != lReturn ){
-        qDebug("Failed SCardControl");
+        qDebug("Failed SCardControl %x", lReturn);
     }
     else{
         //if(dwrecv == 9){
@@ -485,22 +486,25 @@ void Dialog::buzzerGetStatus()
 
 void Dialog::ledBuzIndSet(bool bEventBuzzer)
 {
+    qDebug("\nledBuzIndSet");
     SCARDHANDLE     hCardHandle;
-    uint8_t cardCtrlPolling[20];
+    uint8_t cardCtrlPolling[50];
     LONG    lReturn;
 
     uint32_t dwrecv, dwAP;
 
-    wchar_t arr[500];
-    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerList[iSelectedReader].toWCharArray(&(arr[0]));
-
-    lReturn = SCardConnectA( hSC,
-      (LPCSTR)&(arr[0]),
+    lReturn = SCardConnect( hSC, readerList[iSelectedReader].toLocal8Bit().constData(),
     SCARD_SHARE_DIRECT,
-    SCARD_PROTOCOL_UNDEFINED,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
     (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
 
     uint8_t cmdBuf[6];
     cmdBuf[0] = 0xe0;
@@ -515,7 +519,7 @@ void Dialog::ledBuzIndSet(bool bEventBuzzer)
                             &(cmdBuf[0]),
                             6,
                             &(cardCtrlPolling[0]),
-                            20,
+                            50,
                             (DWORD*)&dwrecv );
     if ( SCARD_S_SUCCESS != lReturn ){
         qDebug("Failed SCardControl");
@@ -541,23 +545,25 @@ void Dialog::ledBuzIndSet(bool bEventBuzzer)
 
 void Dialog::ledBuzIndGetStatus()
 {
+    qDebug("\nledBuzIndGetStatus");
     SCARDHANDLE     hCardHandle;
-    uint8_t cardCtrlPolling[20];
+    uint8_t cardCtrlPolling[50];
     LONG    lReturn;
 
     uint32_t dwrecv, dwAP;
 
-    wchar_t arr[500];
-    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerList[iSelectedReader].toWCharArray(&(arr[0]));
-
-    lReturn = SCardConnectA( hSC,
-      (LPCSTR)&(arr[0]),
+    lReturn = SCardConnect( hSC, readerList[iSelectedReader].toLocal8Bit().constData(),
     SCARD_SHARE_DIRECT,
-    SCARD_PROTOCOL_UNDEFINED,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
     (DWORD*)&dwAP );
 
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
     uint8_t cmdBuf[6];
     cmdBuf[0] = 0xe0;
     cmdBuf[1] = 0x00;
@@ -570,7 +576,7 @@ void Dialog::ledBuzIndGetStatus()
                             &(cmdBuf[0]),
                             5,
                             &(cardCtrlPolling[0]),
-                            20,
+                            50,
                             (DWORD*)&dwrecv );
     if ( SCARD_S_SUCCESS != lReturn ){
         qDebug("Failed SCardControl");
@@ -613,37 +619,42 @@ void Dialog::handleNewTcpConnection()
 
 void Dialog::getAutoPICCPolling()
 {
+    qDebug("\ngetAutoPICCPolling");
     SCARDHANDLE     hCardHandle;
-    uint8_t cmdBuf[6], cardCtrlPolling[20];
+    uint8_t cardCtrlPolling[50];
     LONG    lReturn;
+
+    uint32_t dwrecv, dwAP;
+
+    lReturn = SCardConnect( hSC, readerList[iSelectedReader].toLocal8Bit().constData(),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
+
+    uint8_t cmdBuf[6];
     cmdBuf[0] = 0xe0;
     cmdBuf[1] = 0x00;
     cmdBuf[2] = 0x00;
     cmdBuf[3] = 0x23;
     cmdBuf[4] = 0x00;
 
-    uint32_t dwrecv, dwAP;
-
-    wchar_t arr[500];
-    memset(&(arr[0]), 0, sizeof(wchar_t)*500);
-    readerList[iSelectedReader].toWCharArray(&(arr[0]));
-
-    lReturn = SCardConnectA( hSC, (LPCSTR)&(arr[0]),
-    SCARD_SHARE_DIRECT,
-    SCARD_PROTOCOL_UNDEFINED,
-    &hCardHandle,
-    (DWORD*)&dwAP );
-
-
     lReturn = SCardControl( hCardHandle,
                             SCARD_CTL_CODE(3500),
                             &(cmdBuf[0]),
                             5,
                             &(cardCtrlPolling[0]),
-                            20,
+                            50,
                             (DWORD*)&dwrecv );
     if ( SCARD_S_SUCCESS != lReturn ){
-        qDebug("Failed SCardControl");
+        qDebug("Failed SCardControl %x", lReturn);
     }
     else{
         //if(dwrecv == 9){
