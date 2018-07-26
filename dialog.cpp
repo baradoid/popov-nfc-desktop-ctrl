@@ -96,7 +96,7 @@ void Dialog::timeout()
     DWORD dwsend, dwrecv, dwAP;
     uint8_t buf[20], cardCtrl[20];
 
-    lReturn = SCardConnect( hSC,
+    lReturn = SCardConnectA( hSC,
      (LPCSTR) &(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_T1,
@@ -386,7 +386,7 @@ void Dialog::buzzerSetCtrl(uint8_t buzDuration)
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
-    lReturn = SCardConnect( hSC,
+    lReturn = SCardConnectA( hSC,
       (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
@@ -495,7 +495,7 @@ void Dialog::ledBuzIndSet(bool bEventBuzzer)
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
-    lReturn = SCardConnect( hSC,
+    lReturn = SCardConnectA( hSC,
       (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
@@ -551,7 +551,7 @@ void Dialog::ledBuzIndGetStatus()
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
-    lReturn = SCardConnect( hSC,
+    lReturn = SCardConnectA( hSC,
       (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
@@ -628,7 +628,7 @@ void Dialog::getAutoPICCPolling()
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
-    lReturn = SCardConnect( hSC, (LPCSTR)&(arr[0]),
+    lReturn = SCardConnectA( hSC, (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
