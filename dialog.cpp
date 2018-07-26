@@ -1,6 +1,6 @@
 #include "dialog.h"
 #include "ui_dialog.h"
-#include <winscard.h>
+
 
 Dialog::Dialog(QWidget *parent) :
     QDialog(parent),
@@ -97,7 +97,7 @@ void Dialog::timeout()
     uint8_t buf[20], cardCtrl[20];
 
     lReturn = SCardConnect( hSC,
-      &(arr[0]),
+     (LPCSTR) &(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_T1,
     &hCardHandle,
@@ -387,7 +387,7 @@ void Dialog::buzzerSetCtrl(uint8_t buzDuration)
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
-      &(arr[0]),
+      (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
@@ -441,7 +441,7 @@ void Dialog::buzzerGetStatus()
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
-      &(arr[0]),
+      (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
@@ -496,7 +496,7 @@ void Dialog::ledBuzIndSet(bool bEventBuzzer)
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
-      &(arr[0]),
+      (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
@@ -552,7 +552,7 @@ void Dialog::ledBuzIndGetStatus()
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
     lReturn = SCardConnect( hSC,
-      &(arr[0]),
+      (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,
@@ -628,7 +628,7 @@ void Dialog::getAutoPICCPolling()
     memset(&(arr[0]), 0, sizeof(wchar_t)*500);
     readerList[iSelectedReader].toWCharArray(&(arr[0]));
 
-    lReturn = SCardConnect( hSC, &(arr[0]),
+    lReturn = SCardConnect( hSC, (LPCSTR)&(arr[0]),
     SCARD_SHARE_DIRECT,
     SCARD_PROTOCOL_UNDEFINED,
     &hCardHandle,

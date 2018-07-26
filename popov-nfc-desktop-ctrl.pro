@@ -35,5 +35,11 @@ FORMS += \
 
 win32:LIBS +=libwinscard
 
+unix{
+INCLUDEPATH += /usr/include/PCSC
+CONFIG += c++11
+LIBS += -lpcsclite
+}
+
 #LIBS += "D:\Program Files\Microsoft SDKs\Windows\v7.0A\Lib\WinSCard.Lib"
 

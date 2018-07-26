@@ -3,7 +3,7 @@
 
 #include <QDialog>
 #include <QTimer>
-#include <winscard.h>
+
 #include <QTime>
 #include <QListWidgetItem>
 
@@ -11,6 +11,16 @@
 #include <QTcpSocket>
 
 #include <QSettings>
+
+#include <stdint.h>
+
+#if defined(Q_OS_LINUX)
+#include <PCSC/winscard.h>
+#define SCARD_CTL_CODE(code) (0x42000000+(code))
+#elif defined(Q_OS_WIN)
+#include <winscard.h>
+#endif
+
 
 namespace Ui {
 class Dialog;
