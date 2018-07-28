@@ -134,6 +134,10 @@ void NfcWorkerThread::run() {
         else if(rv == SCARD_E_TIMEOUT){
             //qDebug("SCardGetStatusChange SCARD_E_TIMEOUT");
         }
+        else if(rv == SCARD_E_SERVICE_STOPPED){
+            qDebug("SCardGetStatusChange SCARD_E_SERVICE_STOPPED");
+            break;
+        }
         else
             qDebug("SCardGetStatusChange %x", rv);
 

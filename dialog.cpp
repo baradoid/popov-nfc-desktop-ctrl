@@ -4,7 +4,8 @@
 Dialog::Dialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
-    settings("murinets", "popov-nfc")
+    settings("murinets", "popov-nfc"),
+    curTcd(NULL)
 {
     ui->setupUi(this);
 
@@ -29,6 +30,10 @@ Dialog::Dialog(QWidget *parent) :
     tcpServ = new QTcpServer(this);
     connect(tcpServ, SIGNAL(newConnection()), this, SLOT(handleNewTcpConnection()));
     tcpServ->listen(QHostAddress::Any, 3600);
+
+    progressTime.setInterval(100);
+    progressTime.setSingleShot(false);
+    connect(&progressTime, SIGNAL(timeout()), this, SLOT(handleProgressTick()));
 
 
     //ui->listWidget->setAttribute( Qt::WA_TransparentForMouseEvents );
@@ -70,8 +75,10 @@ Dialog::Dialog(QWidget *parent) :
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
 
-
-
+    QPalette Pal(palette());
+    Pal.setColor(QPalette::Background, Qt::red);
+    ui->widgetIndic->setAutoFillBackground(true);
+    ui->widgetIndic->setPalette(Pal);
 }
 
 Dialog::~Dialog()
@@ -88,9 +95,6 @@ Dialog::~Dialog()
 
     delete ui;
 }
-
-
-//__declspec(dllimport) extern const SCARD_IO_REQUEST g_rgSCardT1Pci;
 
 void Dialog::timeout()
 {
@@ -365,9 +369,6 @@ void Dialog::timeout()
                     tcd->connList.push_front(*connDescr);
                     lwi->setSelected(true);
                     on_listWidget_currentRowChanged(lwInd);
-
-
-
                 }
                 else{
                     qDebug("bad resp code: %x", respCode);
@@ -407,7 +408,7 @@ void Dialog::timeout()
 }
 
 void Dialog::on_listWidget_currentRowChanged(int currentRow)
-{
+{    
     if(currentRow == -1)
         return;
     QListWidgetItem *lwi = ui->listWidget->item(currentRow);
@@ -455,7 +456,6 @@ void Dialog::handleNewTcpConnection()
 
 void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
 {
-    QPalette Pal(palette());
     QString uidStr;
     if(uidLen == 9)
         uidStr.sprintf("0x%014llX", uid);
@@ -465,9 +465,9 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
     //qDebug(qPrintable(uidStr));
 
     bool bExist = false;
-    int lwInd = 0;
+    int lwInd = -1;
     QListWidgetItem *lwi;
-    TCardDescription *tcd;
+    TCardDescription *tcd = NULL;
     for(int i=0; i<ui->listWidget->count(); i++){
         QListWidgetItem *wi = ui->listWidget->item(i);
         TCardDescription *tc = (TCardDescription*)wi->data(Qt::UserRole).toInt();
@@ -477,7 +477,7 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
             lwi = wi;
             tcd = tc;
             //tcd->bSeenOnLastPoll = true;
-            //break;
+            break;
         }
         else{
             tc->bSeenOnLastPoll = false;
@@ -486,18 +486,19 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
 
     if(bExist == false){
         ui->listWidget->addItem(uidStr);
-        lwi = ui->listWidget->item(ui->listWidget->count()-1);
+        lwInd = ui->listWidget->count()-1;
+        lwi = ui->listWidget->item(lwInd);
         tcd = new TCardDescription;
         tcd->uid = uid;
         tcd->uidStr = uidStr;
         tcd->uidBytesLen = uidLen - 2;
         tcd->bSeenOnLastPoll = false;
         lwi->setData(Qt::UserRole, (int)tcd);
-
     }
 
+    curTcd = tcd;
     if(tcd->bSeenOnLastPoll == false){
-        tcd->currentSessionStart = QTime::currentTime();
+        tcd->currentSessionStart.start();
     }
     else{
         int deltaElapsed = tcd->currentSessionStart.elapsed();
@@ -505,7 +506,6 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
         int prcnt = ((float)deltaElapsed/deltaThresh)*100;
         if(prcnt > 100){
             prcnt = 100;
-            Pal.setColor(QPalette::Background, Qt::blue);
         }
         qDebug("delta: %d %d", deltaElapsed, prcnt);
         ui->progressBar->setValue(prcnt);
@@ -527,13 +527,59 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
     tcd->connList.push_front(*connDescr);
     lwi->setSelected(true);
     on_listWidget_currentRowChanged(lwInd);
+    progressTime.start();
 
-
+    QPalette Pal(palette());
+    Pal.setColor(QPalette::Background, Qt::green);
+    ui->widgetIndic->setAutoFillBackground(true);
+    ui->widgetIndic->setPalette(Pal);
 
 }
+
 void Dialog::handleCardRemoved()
 {
+
     qDebug("handleCardRemoved");
+    progressTime.stop();
+    curTcd = NULL;
+
+
+
+    for(int i=0; i<ui->listWidget->count(); i++){
+        QListWidgetItem *wi = ui->listWidget->item(i);
+        TCardDescription *tc = (TCardDescription*)wi->data(Qt::UserRole).toInt();
+        if(tc->bSeenOnLastPoll == true){
+            for(int i=0; i<clientSockList.size(); i++){
+                clientSockList[i]->write(qPrintable(tc->uidStr+" "));
+                clientSockList[i]->write(qPrintable(QString::number(0)+"\n\n"));
+            }
+        }
+        tc->bSeenOnLastPoll = false;
+    }
+    ui->progressBar->setValue(0);
+
+    QPalette Pal(palette());
+    Pal.setColor(QPalette::Background, Qt::red);
+    ui->widgetIndic->setAutoFillBackground(true);
+    ui->widgetIndic->setPalette(Pal);
 }
 
+void Dialog::handleProgressTick()
+{
+    //qDebug("handleProgressTick");
+    int deltaElapsed = curTcd->currentSessionStart.elapsed();
+    int deltaThresh = ui->lineEditLongPressDelta->text().toInt();
+    int prcnt = ((float)deltaElapsed/deltaThresh)*100;
+    if(prcnt > 100){
+        prcnt = 100;
 
+        QPalette Pal(palette());
+        Pal.setColor(QPalette::Background, Qt::blue);
+        ui->widgetIndic->setAutoFillBackground(true);
+        ui->widgetIndic->setPalette(Pal);
+    }
+    qDebug("delta: %d %d", deltaElapsed, prcnt);
+    ui->progressBar->setValue(prcnt);
+    //qDebug("delta ch %d", ui->lineEditLongPressDelta->text().toInt());
+
+}

@@ -11,6 +11,7 @@
 #include <QTcpSocket>
 
 #include <QSettings>
+#include <QTimer>
 
 #include <stdint.h>
 #include <nfcworkerthread.h>
@@ -66,6 +67,9 @@ private:
     //QThread workerThread;
     NfcWorkerThread *w;
 
+    QTimer progressTime;
+    TCardDescription *curTcd;
+
 private slots:
     void timeout();
     void on_listWidget_currentRowChanged(int currentRow);
@@ -73,6 +77,7 @@ private slots:
 
     void handleCardDetected(quint64 uid, quint8 uidLen);
     void handleCardRemoved();
+    void handleProgressTick();
 };
 
 
