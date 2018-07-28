@@ -31,7 +31,15 @@ signals:
     void resultReady(const QString &result);
     void cardDetected(quint64 uid);
     void cardRemoved();
-private:
+private:    
     void getReadersList(SCARDCONTEXT *phSC, QStringList *readerList);
     void getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid);
+
+
+    void getAutoPICCPolling(SCARDCONTEXT &hSC, QString rName);
+    void buzzerSetCtrl(SCARDCONTEXT &hSC, QString rName, uint8_t buzDuration);
+    void buzzerGetStatus(SCARDCONTEXT &hSC, QString rName);
+    void ledBuzIndSet(SCARDCONTEXT &hSC, QString rName, bool bEventBuzzer);
+    void ledBuzIndGetStatus(SCARDCONTEXT &hSC, QString rName);
+
 };

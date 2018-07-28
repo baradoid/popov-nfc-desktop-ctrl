@@ -306,7 +306,356 @@ void NfcWorkerThread::getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid)
          qDebug("SCardDisconnect failed %x\n", lReturn);
      }
 
+}
 
+
+
+void NfcWorkerThread::buzzerSetCtrl(SCARDCONTEXT &hSC, QString rName, uint8_t buzDuration)
+{
+    qDebug("\nbuzzerSetCtrl");
+    SCARDHANDLE     hCardHandle;
+    uint8_t cardCtrlPolling[50];
+    LONG    lReturn;
+
+    uint32_t dwrecv, dwAP;
+
+    lReturn = SCdConn( hSC, qPrintable(rName),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
+
+    uint8_t cmdBuf[6];
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x28;
+    cmdBuf[4] = 0x01;
+    cmdBuf[5] = buzDuration;
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]),
+                            6,
+                            &(cardCtrlPolling[0]),
+                            50,
+                            (DWORD*)&dwrecv );
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardControl %x", lReturn);
+    }
+    else{
+        QString recvStr = "buzzer set ctrl resp: ";
+        recvStr += QString::number(dwrecv) + ": ";
+        for(uint32_t i=0; i<dwrecv; i++){
+            recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+        }
+        qDebug(qPrintable(recvStr));
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
 
 }
+
+void NfcWorkerThread::buzzerGetStatus(SCARDCONTEXT &hSC, QString rName)
+{
+    qDebug("\nbuzzerGetStatus");
+
+    SCARDHANDLE     hCardHandle;
+    uint8_t cardCtrlPolling[50];
+    LONG    lReturn;
+
+    uint32_t dwrecv, dwAP;
+
+    lReturn = SCdConn( hSC, qPrintable(rName),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
+
+    uint8_t cmdBuf[6];
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x28;
+    cmdBuf[4] = 0x00;
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]),
+                            5,
+                            &(cardCtrlPolling[0]),
+                            50,
+                            (DWORD*)&dwrecv );
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardControl %x", lReturn);
+    }
+    else{
+        //if(dwrecv == 9){
+            QString recvStr = "buzzer status: ";
+            recvStr += QString::number(dwrecv) + ": ";
+            for(uint32_t i=0; i<dwrecv; i++){
+                recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+            }
+            qDebug(qPrintable(recvStr));
+        //}
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
+
+}
+
+void NfcWorkerThread::ledBuzIndSet(SCARDCONTEXT &hSC, QString rName, bool bEventBuzzer)
+{
+    qDebug("\nledBuzIndSet");
+    SCARDHANDLE     hCardHandle;
+    uint8_t cardCtrlPolling[50];
+    LONG    lReturn;
+
+    uint32_t dwrecv, dwAP;
+
+    lReturn = SCdConn( hSC, qPrintable(rName),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
+
+    uint8_t cmdBuf[6];
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x21;
+    cmdBuf[4] = 0x01;
+    cmdBuf[5] = 0x77 | (bEventBuzzer? 0x08:0x00);
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]),
+                            6,
+                            &(cardCtrlPolling[0]),
+                            50,
+                            (DWORD*)&dwrecv );
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardControl");
+    }
+    else{
+        //if(dwrecv == 9){
+            QString recvStr = "ledBuzIndStatus resp: ";
+            recvStr += QString::number(dwrecv) + ": ";
+            for(uint32_t i=0; i<dwrecv; i++){
+                recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+            }
+            qDebug(qPrintable(recvStr));
+        //}
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
+
+}
+
+void NfcWorkerThread::ledBuzIndGetStatus(SCARDCONTEXT &hSC, QString rName)
+{
+    qDebug("\nledBuzIndGetStatus");
+    SCARDHANDLE     hCardHandle;
+    uint8_t cardCtrlPolling[50];
+    LONG    lReturn;
+
+    uint32_t dwrecv, dwAP;
+
+    lReturn = SCdConn( hSC, qPrintable(rName),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
+    uint8_t cmdBuf[6];
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x21;
+    cmdBuf[4] = 0x00;
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]),
+                            5,
+                            &(cardCtrlPolling[0]),
+                            50,
+                            (DWORD*)&dwrecv );
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardControl");
+    }
+    else{
+        //if(dwrecv == 9){
+            QString recvStr = "ledBuzIndStatus: ";
+            recvStr += QString::number(dwrecv) + ": ";
+            for(uint32_t i=0; i<dwrecv; i++){
+                recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+            }
+            qDebug(qPrintable(recvStr));
+        //}
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
+
+}
+
+
+void NfcWorkerThread::getAutoPICCPolling(SCARDCONTEXT &hSC, QString rName)
+{
+    qDebug("\ngetAutoPICCPolling");
+    SCARDHANDLE     hCardHandle;
+    uint8_t cardCtrlPolling[50];
+    LONG    lReturn;
+
+    uint32_t dwrecv, dwAP;
+
+    lReturn = SCdConn(hSC, qPrintable(rName),
+    SCARD_SHARE_DIRECT,
+    SCARD_PROTOCOL_UNDEFINED, //SCARD_PROTOCOL_UNDEFINED,
+    &hCardHandle,
+    (DWORD*)&dwAP );
+
+    if (lReturn == SCARD_S_SUCCESS)
+        qDebug("SCardConnect success 0x%x", (uint32_t)hCardHandle);
+    else{
+        qDebug("Failed SCardConnect");
+        return;
+    }
+
+    uint8_t cmdBuf[6];
+    cmdBuf[0] = 0xe0;
+    cmdBuf[1] = 0x00;
+    cmdBuf[2] = 0x00;
+    cmdBuf[3] = 0x23;
+    cmdBuf[4] = 0x00;
+
+    lReturn = SCardControl( hCardHandle,
+                            SCARD_CTL_CODE(3500),
+                            &(cmdBuf[0]),
+                            5,
+                            &(cardCtrlPolling[0]),
+                            50,
+                            (DWORD*)&dwrecv );
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardControl %x", lReturn);
+    }
+    else{
+        //if(dwrecv == 9){
+            QString recvStr = "auto polling settings: ";
+            recvStr += QString::number(dwrecv) + ": ";
+            for(uint32_t i=0; i<dwrecv; i++){
+                recvStr += QString::number(cardCtrlPolling[i], 16) + " ";
+            }
+            qDebug(qPrintable(recvStr));
+        //}
+    }
+
+    lReturn = SCardDisconnect(hCardHandle, SCARD_LEAVE_CARD);
+    if ( SCARD_S_SUCCESS != lReturn )
+    {
+        qDebug("Failed SCardDisconnect\n");
+    }
+}
+
+
+//void NfcWorkerThread::getReadersList()
+//{
+//    QStringList readerList;
+//    LONG            lReturn;
+//    // Establish the context.
+//    lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM,
+//                                    NULL,
+//                                    NULL,
+//                                    &hSC);
+//    if ( SCARD_S_SUCCESS != lReturn ){
+//        qDebug("Failed SCardEstablishContext");
+//        return;
+//    }
+
+//    //QString readerName, readerName2;
+//    LPTSTR          pmszReaders = NULL;
+//    LPTSTR          pReader;
+//    DWORD           cch = SCARD_AUTOALLOCATE;
+//    // Retrieve the list the readers.
+//    // hSC was set by a previous call to SCardEstablishContext.
+//    lReturn = SCardListReaders(hSC, NULL, (LPTSTR)&pmszReaders, &cch );
+//    if(lReturn != SCARD_S_SUCCESS){
+//        qDebug("Failed SCardListReaders");
+//        return;
+//    }
+
+//    // Do something with the multi string of readers.
+//    // Output the values.
+//    // A double-null terminates the list of values.
+
+//    pReader = pmszReaders;
+//    char ch;
+//    while ( '\0' != *pReader )
+//    {
+//        QString rname;
+//        while ( '\0' != *pReader )
+//        {
+//            //QString ss;
+//            //ss.append()
+//            ch = *(pReader)                        ;
+//            pReader++;
+//            rname.append(ch);
+//            // Display the value.
+//            // Advance to the next value.
+//            //pReader = pReader + wcslen((wchar_t  *)pReader) + 1;
+//        }
+//        qDebug("Reader: %s", qPrintable(rname));
+//        readerList.append(rname);
+//        pReader++;
+//    }
+
+//    // Free the memory.
+//    lReturn = SCardFreeMemory( hSC,
+//                                pmszReaders );
+//    if ( SCARD_S_SUCCESS != lReturn )
+//        qDebug("Failed SCardFreeMemory\n");
+//}
 

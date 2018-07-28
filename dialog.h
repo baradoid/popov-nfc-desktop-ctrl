@@ -47,10 +47,7 @@ public:
 
 private:
     Ui::Dialog *ui;
-    QTimer timer;
-    QStringList readerList;
-    int iSelectedReader;
-    SCARDCONTEXT    hSC;
+    QTimer timer;        
 
     void buzzerGetStatus();
     void buzzerSetCtrl(uint8_t buzDuration);
