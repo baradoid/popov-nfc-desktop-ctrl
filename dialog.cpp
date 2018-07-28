@@ -35,45 +35,50 @@ Dialog::Dialog(QWidget *parent) :
     //ui->listWidget->setAttribute( Qt::WA_TransparentForMouseEvents );
 
 
-    getReadersList();
+//    getReadersList();
 
-    for(int i=0; i<readerList.size(); i++){
-        if(readerList[i].contains("PICC")){
-            iSelectedReader = i;
-            qDebug("select reader index %d", i);
-            break;
-        }
-    }
+//    for(int i=0; i<readerList.size(); i++){
+//        if(readerList[i].contains("PICC")){
+//            iSelectedReader = i;
+//            qDebug("select reader index %d", i);
+//            break;
+//        }
+//    }
 
-    if(iSelectedReader == -1)
-        return;
-
-
-    getAutoPICCPolling();
-
-    buzzerSetCtrl(0x0);
-    buzzerGetStatus();
+//    if(iSelectedReader == -1)
+//        return;
 
 
-    ledBuzIndSet(false);
-    ledBuzIndGetStatus();
+//    getAutoPICCPolling();
+
+//    buzzerSetCtrl(0x0);
+//    buzzerGetStatus();
+
+
+//    ledBuzIndSet(false);
+//    ledBuzIndGetStatus();
 
 
     //QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(timeout()));
     //timer.setInterval(100);
     //timer.start();
 
-    w = new WorkerThread(this);
+    w = new NfcWorkerThread(this);
     //connect(workerThread, &WorkerThread::resultReady, this, &MyObject::handleResults);
-    connect(w, &WorkerThread::finished, w, &QObject::deleteLater);
+    connect(w, &NfcWorkerThread::finished, w, &QObject::deleteLater);
+
+    connect(w, SIGNAL(cardDetected(quint64)), this, SLOT(handleCardDetected(quint64)));
+    connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
+
+
 
 }
 
 Dialog::~Dialog()
 {
-    //workerThread.quit();
-    //workerThread.wait();
+    w->requestInterruption();
+    w->wait();
 
     int port = ui->lineEditPort->text().toInt();
     settings.setValue("port", port);
@@ -794,152 +799,18 @@ void Dialog::getReadersList()
         qDebug("Failed SCardFreeMemory\n");   
 }
 
-WorkerThread::WorkerThread(QObject*){
-
-}
-
-void WorkerThread::run() {
-
-    SCARDCONTEXT    hSC;
-    QStringList readerList;
-    int iSelectedReader;
-
-    uint32_t rv;
-    SCARD_READERSTATE_def *rgReaderStates_t = NULL;
-    SCARD_READERSTATE_def rgReaderStates[2];
-    int nbReaders = 2;
-
-    getReadersList(&hSC, &readerList);
-    iSelectedReader = -1;
-    for(int i=0; i<readerList.size(); i++){
-        if(readerList[i].contains("PICC")){
-            iSelectedReader = i;
-            qDebug("select reader index %d", i);
-            break;
-        }
-    }
-
-    if(iSelectedReader == -1)
-        return;
-
-    char nnn[500];
-    memcpy(&(nnn[0]), readerList[iSelectedReader].toLocal8Bit().constData(), readerList[iSelectedReader].length()+1);
-    memset( &(rgReaderStates[0]), 0, 2*sizeof(SCARD_READERSTATE_def));
-    rgReaderStates[0].szReader = &(nnn[0]);
-    rgReaderStates[0].dwCurrentState = SCARD_STATE_UNAWARE;
-    rgReaderStates[0].cbAtr = sizeof rgReaderStates_t[0].rgbAtr;
-
-    rgReaderStates[1].szReader = "\\\\?PnP?\\Notification";
-    rgReaderStates[1].dwCurrentState = SCARD_STATE_UNAWARE;
-
-    int start  = QTime::currentTime().msecsSinceStartOfDay();
-
-    while(true){
-
-        rv = SCardGetStatusChange_def(hSC,  500, rgReaderStates, 1);
-
-
-        if(rv == SCARD_S_SUCCESS){
-            QString debStr;
-            //qDebug("msecs: %d", QTime::currentTime().msecsSinceStartOfDay() - start);
-            //start = QTime::currentTime().msecsSinceStartOfDay();
-
-            debStr.sprintf("%04d SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x ", QTime::currentTime().msecsSinceStartOfDay() - start,
-                           rgReaderStates[0].dwCurrentState , rgReaderStates[0].dwEventState);
-            start = QTime::currentTime().msecsSinceStartOfDay();
-            //qDebug("SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x", rgReaderStates[0].dwEventState , rgReaderStates[1].dwEventState);
-            rgReaderStates[0].dwCurrentState = rgReaderStates[0].dwEventState;
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_IGNORE)
-                debStr+= QString("SCARD_STATE_IGNORE "); // qDebug("SCARD_STATE_IGNORE ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_CHANGED)
-                debStr+= QString("SCARD_STATE_CHANGED ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNKNOWN)
-                debStr+= QString("SCARD_STATE_UNKNOWN ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNAVAILABLE)
-                debStr+= QString("SCARD_STATE_UNAVAILABLE ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_EMPTY)
-                debStr+= QString("SCARD_STATE_EMPTY ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_PRESENT)
-                debStr+= QString("SCARD_STATE_PRESENT ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_ATRMATCH)
-                debStr+= QString("SCARD_STATE_ATRMATCH ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_EXCLUSIVE)
-                debStr+= QString("SCARD_STATE_EXCLUSIVE ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_INUSE)
-                debStr+= QString("SCARD_STATE_INUSE ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_MUTE)
-                debStr+= QString("SCARD_STATE_MUTE ");
-
-            qDebug() << qPrintable(debStr);
-
-        }
-        else if(rv == SCARD_E_TIMEOUT){
-            //qDebug("SCardGetStatusChange SCARD_E_TIMEOUT");
-        }
-        else
-            qDebug("SCardGetStatusChange %x", rv);
-
-
-
-    }
-    //emit resultReady(result);
-}
-
-
-
-void WorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList)
+void Dialog::handleCardDetected(quint64 uid)
 {
-    LONG            lReturn;
-    // Establish the context.
-    lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM,
-                                    NULL,
-                                    NULL,
-                                    phSC);
-    if ( SCARD_S_SUCCESS != lReturn ){
-        qDebug("Failed SCardEstablishContext");
-        return;
-    }
-
-    //QString readerName, readerName2;
-    LPTSTR          pmszReaders = NULL;
-    LPTSTR          pReader;
-    DWORD           cch = SCARD_AUTOALLOCATE;
-    // Retrieve the list the readers.
-    // hSC was set by a previous call to SCardEstablishContext.
-    lReturn = SCardListReaders(*phSC, NULL, (LPTSTR)&pmszReaders, &cch );
-    if(lReturn != SCARD_S_SUCCESS){
-        qDebug("Failed SCardListReaders");
-        return;
-    }
-
-    // Do something with the multi string of readers.
-    // Output the values.
-    // A double-null terminates the list of values.
-
-    pReader = pmszReaders;
-    char ch;
-    while ( '\0' != *pReader )
-    {
-        QString rname;
-        while ( '\0' != *pReader )
-        {
-            //QString ss;
-            //ss.append()
-            ch = *(pReader)                        ;
-            pReader++;
-            rname.append(ch);
-            // Display the value.
-            // Advance to the next value.
-            //pReader = pReader + wcslen((wchar_t  *)pReader) + 1;
-        }
-        qDebug("Reader: %s", qPrintable(rname));
-        (*readerList).append(rname);
-        pReader++;
-    }
-
-    // Free the memory.
-    lReturn = SCardFreeMemory( *phSC,
-                                pmszReaders );
-    if ( SCARD_S_SUCCESS != lReturn )
-        qDebug("Failed SCardFreeMemory\n");
+    qDebug();
+    QString uidStr;
+    uidStr.sprintf("0x%08llX", uid);
+    //QString uidStr = qPrintable(QString::number(uid, 16));
+    uidStr = "handleCardDetected  " + uidStr;
+    qDebug(qPrintable(uidStr));
 }
+void Dialog::handleCardRemoved()
+{
+    qDebug("handleCardRemoved");
+}
+
+

@@ -11,25 +11,9 @@
 #include <QTcpSocket>
 
 #include <QSettings>
-#include <QThread>
+
 #include <stdint.h>
-
-
-#if defined(Q_OS_LINUX)
-#include <PCSC/winscard.h>
-#define SCARD_CTL_CODE(code) (0x42000000+(code-100))
-
-#define SCdConn SCardConnect
-#define SCARD_READERSTATE_def SCARD_READERSTATE
-#define SCardGetStatusChange_def SCardGetStatusChange
-
-#elif defined(Q_OS_WIN)
-
-#include <winscard.h>
-#define SCdConn SCardConnectA
-#define SCARD_READERSTATE_def SCARD_READERSTATE_A
-#define SCardGetStatusChange_def SCardGetStatusChangeA
-#endif
+#include <nfcworkerthread.h>
 
 
 namespace Ui {
@@ -52,23 +36,6 @@ typedef struct {
     QTime currentSessionStart;
     QList<TConnectionDescr> connList;
 } TCardDescription;
-
-
-
-class WorkerThread  : public QThread
-{
-    Q_OBJECT
-
-    void run() override;
-
-public:
-    WorkerThread(QObject*);
-
-signals:
-    void resultReady(const QString &result);
-private:
-    void getReadersList(SCARDCONTEXT *phSC, QStringList *readerList);
-};
 
 class Dialog : public QDialog
 {
@@ -99,13 +66,16 @@ private:
 
     QSettings settings;
 
-    QThread workerThread;
-    WorkerThread *w;
+    //QThread workerThread;
+    NfcWorkerThread *w;
 
 private slots:
     void timeout();
     void on_listWidget_currentRowChanged(int currentRow);
     void handleNewTcpConnection();
+
+    void handleCardDetected(quint64 uid);
+    void handleCardRemoved();
 };
 
 
