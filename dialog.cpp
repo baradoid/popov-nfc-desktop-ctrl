@@ -541,7 +541,7 @@ void Dialog::handleCardRemoved()
 
     qDebug("handleCardRemoved");
     progressTime.stop();
-    curTcd = NULL;
+
 
 
 
@@ -562,6 +562,9 @@ void Dialog::handleCardRemoved()
     Pal.setColor(QPalette::Background, Qt::red);
     ui->widgetIndic->setAutoFillBackground(true);
     ui->widgetIndic->setPalette(Pal);
+
+
+    curTcd = NULL;
 }
 
 void Dialog::handleProgressTick()
@@ -578,8 +581,15 @@ void Dialog::handleProgressTick()
         ui->widgetIndic->setAutoFillBackground(true);
         ui->widgetIndic->setPalette(Pal);
     }
-    qDebug("delta: %d %d", deltaElapsed, prcnt);
+    //qDebug("delta: %d %d", deltaElapsed, prcnt);
     ui->progressBar->setValue(prcnt);
     //qDebug("delta ch %d", ui->lineEditLongPressDelta->text().toInt());
 
+    for(int i=0; i<clientSockList.size(); i++){
+        clientSockList[i]->write(qPrintable(curTcd->uidStr+" "));
+        clientSockList[i]->write(qPrintable(QString::number(prcnt)+"\n\n"));
+    }
+
 }
+
+
