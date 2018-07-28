@@ -29,11 +29,11 @@ public:
 
 signals:
     void resultReady(const QString &result);
-    void cardDetected(quint64 uid);
+    void cardDetected(quint64 uid, quint8 uidLen);
     void cardRemoved();
 private:    
     void getReadersList(SCARDCONTEXT *phSC, QStringList *readerList);
-    void getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid);
+    void getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen);
 
 
     void getAutoPICCPolling(SCARDCONTEXT &hSC, QString rName);

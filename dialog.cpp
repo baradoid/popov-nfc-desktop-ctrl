@@ -66,7 +66,7 @@ Dialog::Dialog(QWidget *parent) :
     //connect(workerThread, &WorkerThread::resultReady, this, &MyObject::handleResults);
     connect(w, &NfcWorkerThread::finished, w, &QObject::deleteLater);
 
-    connect(w, SIGNAL(cardDetected(quint64)), this, SLOT(handleCardDetected(quint64)));
+    connect(w, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64,quint8)));
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
 
@@ -94,6 +94,7 @@ Dialog::~Dialog()
 
 void Dialog::timeout()
 {
+
     QPalette Pal(palette());
 
 
@@ -452,14 +453,83 @@ void Dialog::handleNewTcpConnection()
     ui->lineEditTcpClientsCount->setText(QString::number(clientSockList.size()));
 }
 
-void Dialog::handleCardDetected(quint64 uid)
+void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
 {
-    qDebug();
+    QPalette Pal(palette());
     QString uidStr;
-    uidStr.sprintf("0x%08llX", uid);
+    if(uidLen == 9)
+        uidStr.sprintf("0x%014llX", uid);
+    else if(uidLen == 6)
+        uidStr.sprintf("0x%08llX", uid);
     //QString uidStr = qPrintable(QString::number(uid, 16));
-    uidStr = "handleCardDetected  " + uidStr;
-    qDebug(qPrintable(uidStr));
+    //qDebug(qPrintable(uidStr));
+
+    bool bExist = false;
+    int lwInd = 0;
+    QListWidgetItem *lwi;
+    TCardDescription *tcd;
+    for(int i=0; i<ui->listWidget->count(); i++){
+        QListWidgetItem *wi = ui->listWidget->item(i);
+        TCardDescription *tc = (TCardDescription*)wi->data(Qt::UserRole).toInt();
+        if(wi->text() == uidStr){
+            bExist = true;
+            lwInd = i;
+            lwi = wi;
+            tcd = tc;
+            //tcd->bSeenOnLastPoll = true;
+            //break;
+        }
+        else{
+            tc->bSeenOnLastPoll = false;
+        }
+    }
+
+    if(bExist == false){
+        ui->listWidget->addItem(uidStr);
+        lwi = ui->listWidget->item(ui->listWidget->count()-1);
+        tcd = new TCardDescription;
+        tcd->uid = uid;
+        tcd->uidStr = uidStr;
+        tcd->uidBytesLen = uidLen - 2;
+        tcd->bSeenOnLastPoll = false;
+        lwi->setData(Qt::UserRole, (int)tcd);
+
+    }
+
+    if(tcd->bSeenOnLastPoll == false){
+        tcd->currentSessionStart = QTime::currentTime();
+    }
+    else{
+        int deltaElapsed = tcd->currentSessionStart.elapsed();
+        int deltaThresh = ui->lineEditLongPressDelta->text().toInt();
+        int prcnt = ((float)deltaElapsed/deltaThresh)*100;
+        if(prcnt > 100){
+            prcnt = 100;
+            Pal.setColor(QPalette::Background, Qt::blue);
+        }
+        qDebug("delta: %d %d", deltaElapsed, prcnt);
+        ui->progressBar->setValue(prcnt);
+        //qDebug("delta ch %d", ui->lineEditLongPressDelta->text().toInt());
+
+        for(int i=0; i<clientSockList.size(); i++){
+            clientSockList[i]->write(qPrintable(uidStr+" "));
+            clientSockList[i]->write(qPrintable(QString::number(prcnt)+"\n\n"));
+        }
+    }
+    tcd->bSeenOnLastPoll = true;
+
+    TConnectionDescr *connDescr = new TConnectionDescr;
+    connDescr->time = QTime::currentTime();
+    //connDescr->maxTxSpeed = cardCtrl[5];
+    //connDescr->currentTxSpeed = cardCtrl[6];
+    //connDescr->maxRxSpeed = cardCtrl[7];
+    //connDescr->currentRxSpeed = cardCtrl[8];
+    tcd->connList.push_front(*connDescr);
+    lwi->setSelected(true);
+    on_listWidget_currentRowChanged(lwInd);
+
+
+
 }
 void Dialog::handleCardRemoved()
 {

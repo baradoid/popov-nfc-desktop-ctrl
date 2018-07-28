@@ -71,7 +71,7 @@ private slots:
     void on_listWidget_currentRowChanged(int currentRow);
     void handleNewTcpConnection();
 
-    void handleCardDetected(quint64 uid);
+    void handleCardDetected(quint64 uid, quint8 uidLen);
     void handleCardRemoved();
 };
 
