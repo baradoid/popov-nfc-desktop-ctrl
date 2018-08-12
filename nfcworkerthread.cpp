@@ -219,7 +219,7 @@ void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList
     DWORD           cch = SCARD_AUTOALLOCATE;
     // Retrieve the list the readers.
     // hSC was set by a previous call to SCardEstablishContext.
-    lReturn = SCardListReadersA(*phSC, NULL, (LPSTR)&pmszReaders, &cch );
+    lReturn = SCardListReaders_def(*phSC, NULL, (LPSTR)&pmszReaders, &cch );
     if(lReturn != SCARD_S_SUCCESS){
         qDebug("Failed SCardListReaders");
         emit debugMsg(QString("Failed SCardListReaders"));

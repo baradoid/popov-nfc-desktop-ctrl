@@ -9,6 +9,7 @@
 #define SCdConn SCardConnect
 #define SCARD_READERSTATE_def SCARD_READERSTATE
 #define SCardGetStatusChange_def SCardGetStatusChange
+#define SCardListReaders_def SCardListReaders
 
 #elif defined(Q_OS_WIN)
 
@@ -16,6 +17,7 @@
 #define SCdConn SCardConnectA
 #define SCARD_READERSTATE_def SCARD_READERSTATE_A
 #define SCardGetStatusChange_def SCardGetStatusChangeA
+#define SCardListReaders_def SCardListReadersA
 #endif
 
 class NfcWorkerThread : public QThread
