@@ -25,6 +25,7 @@ void NfcWorkerThread::run() {
     lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hSC);
     if ( SCARD_S_SUCCESS != lReturn ){
         qDebug("Failed SCardEstablishContext");
+        emit debugMsg(QString("Failed SCardEstablishContext"));
         return;
     }
 
@@ -60,118 +61,141 @@ void NfcWorkerThread::run() {
 
         rv = SCardGetStatusChange_def(hSC,  250, &(rgReaderStates[0]), nbReaders);
 
-
         if(rv == SCARD_S_SUCCESS){
-            QString debStr;
-            //qDebug("msecs: %d", QTime::currentTime().msecsSinceStartOfDay() - start);
-            //start = QTime::currentTime().msecsSinceStartOfDay();
+            for(int iCurReader=0; iCurReader<nbReaders; iCurReader++){
+                SCARD_READERSTATE_def *rgRState_t = &(rgReaderStates[iCurReader]);
+                QString debStr;
+                //qDebug("msecs: %d", QTime::currentTime().msecsSinceStartOfDay() - start);
+                //start = QTime::currentTime().msecsSinceStartOfDay();
 
-            debStr.sprintf("%04d SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x ", QTime::currentTime().msecsSinceStartOfDay() - start,
-                           rgReaderStates[0].dwCurrentState , rgReaderStates[0].dwEventState);
-            start = QTime::currentTime().msecsSinceStartOfDay();
-            //qDebug("SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x", rgReaderStates[0].dwEventState , rgReaderStates[1].dwEventState);
+                debStr.sprintf("%d: SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x ", iCurReader,
+                               rgRState_t->dwCurrentState , rgRState_t->dwEventState);
+                start = QTime::currentTime().msecsSinceStartOfDay();
+                //qDebug("SCardGetStatusChange SCARD_S_SUCCESS, curState:0x%x 0x%x", rgReaderStates[0].dwEventState , rgReaderStates[1].dwEventState);
 
 
-            //uint32_t xorState = (rgReaderStates[0].dwEventState&0x7ff) ^ (rgReaderStates[0].dwCurrentState&0x7ff);
-            //qDebug() << qPrintable(QString::asprintf("0x%x xor:0x%x", rgReaderStates[0].dwEventState&0x7ff, xorState));
+                //uint32_t xorState = (rgReaderStates[0].dwEventState&0x7ff) ^ (rgReaderStates[0].dwCurrentState&0x7ff);
+                //qDebug() << qPrintable(QString::asprintf("0x%x xor:0x%x", rgReaderStates[0].dwEventState&0x7ff, xorState));
 
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_IGNORE)
-                debStr+= QString("SCARD_STATE_IGNORE "); // qDebug("SCARD_STATE_IGNORE ");
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_CHANGED){
-                debStr += "SCARD_STATE_CHANGED ";
-                qDebug() << qPrintable(debStr);
-                int nNum = (rgReaderStates[0].dwEventState >> 16)&0xf;
-                //nbReaders = 1 +nNum;
-                //qDebug() << nbReaders;
-                //QString debEvStr;
-                //debEvStr.sprintf("SCARD_STATE_CHANGED %x", rgReaderStates[0].dwEventState);
-                emit debugMsg(debStr);
+                if(rgRState_t->dwEventState & SCARD_STATE_IGNORE)
+                    debStr+= QString("SCARD_STATE_IGNORE "); // qDebug("SCARD_STATE_IGNORE ");
+                if(rgRState_t->dwEventState & SCARD_STATE_CHANGED){
+                    debStr += "SCARD_STATE_CHANGED ";
+                    qDebug() << qPrintable(debStr);
+                    //nbReaders = 1 +nNum;
+                    //qDebug() << nbReaders;
+                    //QString debEvStr;
+                    //debEvStr.sprintf("SCARD_STATE_CHANGED %x", rgReaderStates[0].dwEventState);
+                    emit debugMsg(debStr);
 
-                getReadersList(&hSC, &readerList);
-                iSelectedReader = -1;
-                for(int i=0; i<readerList.size(); i++){
-                    if(readerList[i].contains("PICC")){
-                        iSelectedReader = i;
+                    if(iCurReader == 0){
+                        iSelectedReader = -1;
+                        readerList.clear();
+                        int nNum = (rgRState_t->dwEventState >> 16)&0xf;
+                        if(nNum > 0){
+                            getReadersList(&hSC, &readerList);
 
-                        char nnn[500];
-                        memcpy(&(nnn[0]), readerList[iSelectedReader].toLocal8Bit().constData(), readerList[iSelectedReader].length()+1);
-                        memset( &(rgReaderStates[1+0]), 0, 2*sizeof(SCARD_READERSTATE_def));
+                            for(int i=0; i<readerList.size(); i++){
+                                if(readerList[i].contains("PICC")){
+                                    iSelectedReader = i;
 
-                        rgReaderStates[1+0].szReader = &(nnn[0]);
-                        rgReaderStates[1+0].dwCurrentState = SCARD_STATE_UNAWARE;
-                        rgReaderStates[1+0].cbAtr = sizeof SCARD_READERSTATE_def::rgbAtr;
+                                    char nnn[500];
+                                    memcpy(&(nnn[0]), readerList[iSelectedReader].toLocal8Bit().constData(), readerList[iSelectedReader].length()+1);
+                                    memset( &(rgReaderStates[1+0]), 0, 2*sizeof(SCARD_READERSTATE_def));
 
-                        qDebug("select reader index %d", i);
-                        emit debugMsg(QString("select reader index %1").arg(i));
-                        break;
+                                    rgReaderStates[1+0].szReader = &(nnn[0]);
+                                    rgReaderStates[1+0].dwCurrentState = SCARD_STATE_UNAWARE;
+                                    rgReaderStates[1+0].cbAtr = sizeof SCARD_READERSTATE_def::rgbAtr;
+
+                                    qDebug("select reader index %d", i);
+                                    emit debugMsg(QString("select reader index %1").arg(i));
+                                }
+                            }
+                        }
+                        if(iSelectedReader == -1)
+                            nbReaders = 1;
+                        else
+                            nbReaders = 2;
                     }
                 }
-                if(iSelectedReader == -1)
-                    nbReaders = 1;
-                else
-                    nbReaders = 2;
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNKNOWN){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_UNKNOWN ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNAVAILABLE){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_UNAVAILABLE ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_EMPTY){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_EMPTY ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_PRESENT){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_PRESENT ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_ATRMATCH){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_ATRMATCH ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_EXCLUSIVE){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_EXCLUSIVE ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_INUSE){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_INUSE ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_MUTE){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_MUTE ");
-            }
-            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNPOWERED){
-                qDebug() << qPrintable(debStr + "SCARD_STATE_UNPOWERED ");
-            }
-
-
-
-            if( ((rgReaderStates[0].dwEventState&SCARD_STATE_PRESENT) != 0) &&
-                ((rgReaderStates[0].dwCurrentState&SCARD_STATE_EMPTY) != 0)){
-
-
-                QString ATRstr = "ATR: ";
-                for(int i=0; i<rgReaderStates[0].cbAtr; i++){
-                    ATRstr += QString::number(rgReaderStates[0].rgbAtr[i], 16) + " ";
+                if(rgRState_t->dwEventState & SCARD_STATE_UNKNOWN){
+                    debStr += "SCARD_STATE_UNKNOWN ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
                 }
-                qDebug() << qPrintable(ATRstr);
+                if(rgRState_t->dwEventState & SCARD_STATE_UNAVAILABLE){
+                    debStr += "SCARD_STATE_UNAVAILABLE ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_EMPTY){
+                    debStr += "SCARD_STATE_EMPTY ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_PRESENT){
+                    debStr += "SCARD_STATE_PRESENT ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_ATRMATCH){
+                    debStr += "SCARD_STATE_ATRMATCH ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_EXCLUSIVE){
+                    debStr += "SCARD_STATE_EXCLUSIVE ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_INUSE){
+                    debStr += "SCARD_STATE_INUSE ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_MUTE){
+                    debStr += "SCARD_STATE_MUTE ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
+                if(rgRState_t->dwEventState & SCARD_STATE_UNPOWERED){
+                    debStr += "SCARD_STATE_UNPOWERED ";
+                    qDebug() << qPrintable(debStr);
+                    emit debugMsg(debStr);
+                }
 
-                quint64 uid;
-                quint8 uidLen;
-                getUID(hSC, readerList[iSelectedReader], uid, uidLen);
-                emit cardDetected(uid, uidLen);
+                if( ((rgRState_t->dwEventState&SCARD_STATE_PRESENT) != 0) &&
+                        ((rgRState_t->dwCurrentState&SCARD_STATE_EMPTY) != 0)){
+
+
+                    QString ATRstr = "ATR: ";
+                    for(int i=0; i<rgRState_t->cbAtr; i++){
+                        ATRstr += QString::number(rgRState_t->rgbAtr[i], 16) + " ";
+                    }
+                    qDebug() << qPrintable(ATRstr);
+
+                    quint64 uid;
+                    quint8 uidLen;
+                    getUID(hSC, readerList[iSelectedReader], uid, uidLen);
+                    emit cardDetected(uid, uidLen);
+
+                }
+                if( ((rgRState_t->dwEventState&SCARD_STATE_EMPTY) != 0) &&
+                        ((rgRState_t->dwCurrentState&SCARD_STATE_PRESENT) != 0)){
+                    emit cardRemoved();
+                }
+
+
+
+                //            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNAVAILABLE){
+                //                rgReaderStates[0].dwCurrentState = SCARD_STATE_UNAWARE;
+                //            }
+                //            else{
+                rgRState_t->dwCurrentState = rgRState_t->dwEventState;
+                //            }
+
 
             }
-            if( ((rgReaderStates[0].dwEventState&SCARD_STATE_EMPTY) != 0) &&
-                ((rgReaderStates[0].dwCurrentState&SCARD_STATE_PRESENT) != 0)){
-                emit cardRemoved();
-            }
-
-
-
-//            if(rgReaderStates[0].dwEventState & SCARD_STATE_UNAVAILABLE){
-//                rgReaderStates[0].dwCurrentState = SCARD_STATE_UNAWARE;
-//            }
-//            else{
-                rgReaderStates[0].dwCurrentState = rgReaderStates[0].dwEventState;
-//            }
-
-
         }
         else if(rv == SCARD_E_INVALID_PARAMETER){
             qDebug("SCardGetStatusChange SCARD_E_INVALID_PARAMETER");
@@ -182,13 +206,14 @@ void NfcWorkerThread::run() {
         else if(rv == SCARD_E_TIMEOUT){
             //qDebug("SCardGetStatusChange SCARD_E_TIMEOUT");
         }
-        else if(rv == SCARD_E_SERVICE_STOPPED){
+        else if((rv == SCARD_E_SERVICE_STOPPED) || (rv == SCARD_E_NO_SERVICE) ){
             qDebug("SCardGetStatusChange SCARD_E_SERVICE_STOPPED");            
             //break;
 
             lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hSC);
             if ( SCARD_S_SUCCESS != lReturn ){
                 qDebug("Failed SCardEstablishContext");
+                emit debugMsg(QString("Failed SCardEstablishContext"));
                 break;
             }
         }
