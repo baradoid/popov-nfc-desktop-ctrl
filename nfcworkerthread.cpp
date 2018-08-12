@@ -36,6 +36,7 @@ void NfcWorkerThread::run() {
         if(readerList[i].contains("PICC")){
             iSelectedReader = i;
             qDebug("select reader index %d", i);
+            emit debugMsg(QString("select reader index %1").arg(i));
             break;
         }
     }
@@ -213,14 +214,15 @@ void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList
 {
     //QString readerName, readerName2;
     LONG            lReturn;
-    LPTSTR          pmszReaders = NULL;
-    LPTSTR          pReader;
+    LPSTR          pmszReaders = NULL;
+    LPSTR          pReader;
     DWORD           cch = SCARD_AUTOALLOCATE;
     // Retrieve the list the readers.
     // hSC was set by a previous call to SCardEstablishContext.
-    lReturn = SCardListReaders(*phSC, NULL, (LPTSTR)&pmszReaders, &cch );
+    lReturn = SCardListReadersA(*phSC, NULL, (LPSTR)&pmszReaders, &cch );
     if(lReturn != SCARD_S_SUCCESS){
         qDebug("Failed SCardListReaders");
+        emit debugMsg(QString("Failed SCardListReaders"));
         return;
     }
 
@@ -228,32 +230,31 @@ void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList
     // Output the values.
     // A double-null terminates the list of values.
 
+    QString debugStr("SCardListReaders list:");
+
+    int readerInd = 0;
     pReader = pmszReaders;
-    char ch;
     while ( '\0' != *pReader )
     {
-        QString rname;
-        while ( '\0' != *pReader )
-        {
-            //QString ss;
-            //ss.append()
-            ch = *(pReader)                        ;
-            pReader++;
-            rname.append(ch);
-            // Display the value.
-            // Advance to the next value.
-            //pReader = pReader + wcslen((wchar_t  *)pReader) + 1;
-        }
+        QString rname((char*)pReader);
+
+        pReader += rname.length();
         qDebug("Reader: %s", qPrintable(rname));
+        debugStr += QString("\nReader %1: ").arg(readerInd) + rname;
         (*readerList).append(rname);
+        readerInd++;
         pReader++;
     }
+    debugStr += "\n--- end";
+    emit debugMsg(debugStr);
 
     // Free the memory.
     lReturn = SCardFreeMemory( *phSC,
                                 pmszReaders );
-    if ( SCARD_S_SUCCESS != lReturn )
+    if ( SCARD_S_SUCCESS != lReturn ){
         qDebug("Failed SCardFreeMemory\n");
+        emit debugMsg(QString("Failed SCardFreeMemory"));
+    }
 }
 
 void NfcWorkerThread::getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen)

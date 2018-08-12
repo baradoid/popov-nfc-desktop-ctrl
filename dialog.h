@@ -59,6 +59,8 @@ private:
     void getAutoPICCPolling();
     void getReadersList();
 
+
+
     QTcpServer *tcpServ;
     QList<QTcpSocket*> clientSockList;
 
@@ -78,6 +80,7 @@ private slots:
     void handleCardDetected(quint64 uid, quint8 uidLen);
     void handleCardRemoved();
     void handleProgressTick();
+    void addLogString(QString);
 };
 
 

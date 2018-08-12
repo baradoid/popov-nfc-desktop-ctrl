@@ -29,7 +29,12 @@ Dialog::Dialog(QWidget *parent) :
 
     tcpServ = new QTcpServer(this);
     connect(tcpServ, SIGNAL(newConnection()), this, SLOT(handleNewTcpConnection()));
-    tcpServ->listen(QHostAddress::Any, 3600);
+    if(tcpServ->listen(QHostAddress::Any, 3600) == true){
+        addLogString("TCP server start ok on port 3600");
+    }
+    else{
+        addLogString("TCP server start FAIL");
+    }
 
     progressTime.setInterval(100);
     progressTime.setSingleShot(false);
@@ -70,6 +75,7 @@ Dialog::Dialog(QWidget *parent) :
     w = new NfcWorkerThread(this);
     //connect(workerThread, &WorkerThread::resultReady, this, &MyObject::handleResults);
     connect(w, &NfcWorkerThread::finished, w, &QObject::deleteLater);
+    connect(w, SIGNAL(debugMsg(QString)), this, SLOT(addLogString(QString)));
 
     connect(w, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64,quint8)));
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
@@ -592,4 +598,10 @@ void Dialog::handleProgressTick()
 
 }
 
+void Dialog::addLogString(QString s)
+{
+
+    ui->textEditLog->append(QTime::currentTime().toString() + "> " + s);
+
+}
 
