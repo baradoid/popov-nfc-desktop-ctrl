@@ -92,7 +92,7 @@ void NfcWorkerThread::run() {
                         iSelectedReader = -1;
                         readerList.clear();
                         int nNum = (rgRState_t->dwEventState >> 16)&0xf;
-                        if(nNum > 0){
+                        //if(nNum > 0){
                             getReadersList(&hSC, &readerList);
 
                             for(int i=0; i<readerList.size(); i++){
@@ -111,7 +111,7 @@ void NfcWorkerThread::run() {
                                     emit debugMsg(QString("select reader index %1").arg(i));
                                 }
                             }
-                        }
+                        //}
                         if(iSelectedReader == -1)
                             nbReaders = 1;
                         else
@@ -194,8 +194,8 @@ void NfcWorkerThread::run() {
                 rgRState_t->dwCurrentState = rgRState_t->dwEventState;
                 //            }
 
-
             }
+
         }
         else if(rv == SCARD_E_INVALID_PARAMETER){
             qDebug("SCardGetStatusChange SCARD_E_INVALID_PARAMETER");
@@ -205,6 +205,35 @@ void NfcWorkerThread::run() {
         }
         else if(rv == SCARD_E_TIMEOUT){
             //qDebug("SCardGetStatusChange SCARD_E_TIMEOUT");
+            if(nbReaders == 1){
+                iSelectedReader = -1;
+                readerList.clear();
+                //int nNum = (rgRState_t->dwEventState >> 16)&0xf;
+                //if(nNum > 0){
+                    getReadersList(&hSC, &readerList);
+
+                    for(int i=0; i<readerList.size(); i++){
+                        if(readerList[i].contains("PICC")){
+                            iSelectedReader = i;
+
+                            char nnn[500];
+                            memcpy(&(nnn[0]), readerList[iSelectedReader].toLocal8Bit().constData(), readerList[iSelectedReader].length()+1);
+                            memset( &(rgReaderStates[1+0]), 0, 2*sizeof(SCARD_READERSTATE_def));
+
+                            rgReaderStates[1+0].szReader = &(nnn[0]);
+                            rgReaderStates[1+0].dwCurrentState = SCARD_STATE_UNAWARE;
+                            rgReaderStates[1+0].cbAtr = sizeof SCARD_READERSTATE_def::rgbAtr;
+
+                            qDebug("select reader index %d", i);
+                            emit debugMsg(QString("select reader index %1").arg(i));
+                        }
+                    }
+                //}
+                if(iSelectedReader == -1)
+                    nbReaders = 1;
+                else
+                    nbReaders = 2;
+            }
         }
         else if((rv == SCARD_E_SERVICE_STOPPED) || (rv == SCARD_E_NO_SERVICE) ){
             qDebug("SCardGetStatusChange SCARD_E_SERVICE_STOPPED");            
@@ -299,8 +328,8 @@ void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList
     // hSC was set by a previous call to SCardEstablishContext.
     lReturn = SCardListReaders_def(*phSC, NULL, (LPSTR)&pmszReaders, &cch );
     if(lReturn != SCARD_S_SUCCESS){
-        qDebug("Failed SCardListReaders");
-        emit debugMsg(QString("Failed SCardListReaders"));
+        //qDebug("Failed SCardListReaders");
+        //emit debugMsg(QString("Failed SCardListReaders"));
         return;
     }
 
