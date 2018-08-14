@@ -29,12 +29,18 @@ Dialog::Dialog(QWidget *parent) :
 
     tcpServ = new QTcpServer(this);
     connect(tcpServ, SIGNAL(newConnection()), this, SLOT(handleNewTcpConnection()));
-    if(tcpServ->listen(QHostAddress::Any, 3600) == true){
-        addLogString("TCP server start ok on port 3600");
+    if(tcpServ->listen(QHostAddress::Any, port) == true){
+        addLogString(QString("TCP server start ok on port %1").arg(port));
     }
     else{
-        addLogString("TCP server start FAIL");
+        addLogString(QString("TCP server start FAIL with: ") + tcpServ->errorString());
     }
+//    if(tcpServ->isListening() == true){
+//        addLogString("TCP server listen OK");
+//    }
+//    else{
+//        addLogString("TCP server listen FAIL");
+//    }
 
     progressTime.setInterval(100);
     progressTime.setSingleShot(false);
