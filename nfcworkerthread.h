@@ -35,8 +35,9 @@ signals:
     void cardRemoved();
     void debugMsg(QString);
 
-private:    
-    void getReadersList(SCARDCONTEXT *phSC, QStringList *readerList);
+private:
+    uint32_t initContext(SCARDCONTEXT *phSC);
+    uint32_t getReadersList(SCARDCONTEXT *phSC, QStringList *readerList);
     void getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen);
 
 

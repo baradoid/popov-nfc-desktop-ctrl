@@ -21,14 +21,7 @@ void NfcWorkerThread::run() {
     SCARD_READERSTATE_def rgReaderStates[10];
 
     LONG            lReturn;
-    // Establish the context.
-    lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hSC);
-    if ( SCARD_S_SUCCESS != lReturn ){
-        qDebug("Failed SCardEstablishContext");
-        emit debugMsg(QString("Failed SCardEstablishContext"));
-        return;
-    }
-
+    initContext(&hSC);
     int nbReaders = 0;
 
 //    getReadersList(&hSC, &readerList);
@@ -173,14 +166,19 @@ void NfcWorkerThread::run() {
 //        else if(rv == SCARD_E_NO_READERS_AVAILABLE){
 //            qDebug("SCardGetStatusChange SCARD_E_NO_READERS_AVAILABLE");
 //        }
-        else if((rv == SCARD_E_TIMEOUT) ||(rv == SCARD_E_NO_READERS_AVAILABLE) || (nbReaders == 0)){
+        else if((rv == SCARD_E_TIMEOUT) ||
+                (rv == SCARD_E_NO_READERS_AVAILABLE) ||
+                (nbReaders == 0)){
             //qDebug("SCardGetStatusChange SCARD_E_TIMEOUT");
 
             //readerList.clear();
             QStringList readerListCheckNew;
             //int nNum = (rgRState_t->dwEventState >> 16)&0xf;
             //if(nNum > 0){
-            getReadersList(&hSC, &readerListCheckNew);
+            uint32_t lRet = getReadersList(&hSC, &readerListCheckNew);
+
+            if((lRet == SCARD_E_SERVICE_STOPPED) || (lRet == SCARD_E_NO_SERVICE))
+                initContext(&hSC);
 
             bool bEquals = false;
             if(readerList.length() == readerListCheckNew.length()){
@@ -231,13 +229,7 @@ void NfcWorkerThread::run() {
         else if((rv == SCARD_E_SERVICE_STOPPED) || (rv == SCARD_E_NO_SERVICE) ){
             qDebug("SCardGetStatusChange SCARD_E_SERVICE_STOPPED");            
             //break;
-
-            lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hSC);
-            if ( SCARD_S_SUCCESS != lReturn ){
-                qDebug("Failed SCardEstablishContext");
-                emit debugMsg(QString("Failed SCardEstablishContext"));
-                break;
-            }
+            initContext(&hSC);
         }
         else
             qDebug("SCardGetStatusChange %x", rv);
@@ -310,7 +302,7 @@ void NfcWorkerThread::run() {
 //}
 
 
-void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList)
+uint32_t NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList)
 {
     //QString readerName, readerName2;
     LONG            lReturn;
@@ -321,9 +313,20 @@ void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList
     // hSC was set by a previous call to SCardEstablishContext.
     lReturn = SCardListReaders_def(*phSC, NULL, (LPSTR)&pmszReaders, &cch );
     if(lReturn != SCARD_S_SUCCESS){
-        //qDebug("Failed SCardListReaders");
+        if(lReturn ==  SCARD_E_NO_READERS_AVAILABLE){
+            //qDebug("Failed SCardListReaders SCARD_E_NO_READERS_AVAILABLE");
+        }
+        else if(lReturn ==  SCARD_E_READER_UNAVAILABLE){
+            //qDebug("Failed SCardListReaders SCARD_E_READER_UNAVAILABLE");
+        }
+        else if(lReturn ==  SCARD_E_SERVICE_STOPPED)
+            qDebug("Failed SCardListReaders SCARD_E_SERVICE_STOPPED");
+        else if(lReturn ==  SCARD_E_NO_SERVICE)
+            qDebug("Failed SCardListReaders SCARD_E_NO_SERVICE");
+        else
+            qDebug("Failed SCardListReaders unknown 0x%x", lReturn);
         //emit debugMsg(QString("Failed SCardListReaders"));
-        return;
+        return lReturn;
     }
 
     // Do something with the multi string of readers.
@@ -355,6 +358,7 @@ void NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *readerList
         qDebug("Failed SCardFreeMemory\n");
         emit debugMsg(QString("Failed SCardFreeMemory"));
     }
+    return lReturn;
 }
 
 void NfcWorkerThread::getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen)
@@ -767,4 +771,13 @@ void NfcWorkerThread::getAutoPICCPolling(SCARDCONTEXT &hSC, QString rName)
 }
 
 
+uint32_t NfcWorkerThread::initContext(SCARDCONTEXT *phSC)
+{
+    uint32_t lReturn = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, phSC);
+    if ( SCARD_S_SUCCESS != lReturn ){
+        qDebug("Failed SCardEstablishContext");
+        emit debugMsg(QString("Failed SCardEstablishContext"));
+        //break;
+    }
+}
 
