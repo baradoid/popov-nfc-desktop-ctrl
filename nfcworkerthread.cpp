@@ -24,6 +24,7 @@ void NfcWorkerThread::run() {
     initContext(&hSC);
     int nbReaders = 0;
 
+
 //    getReadersList(&hSC, &readerList);
 //    iSelectedReader = -1;
 //    for(int i=0; i<readerList.size(); i++){
@@ -201,6 +202,10 @@ void NfcWorkerThread::run() {
                 iSelectedReader = -1;
                 for(int i=0; i<readerList.size(); i++){
                     if(readerList[i].contains("PICC")){
+
+                        buzzerSetCtrl(hSC, readerList[i], 0x10);
+                        buzzerGetStatus(hSC, readerList[i]);
+
                         iSelectedReader = i;
 
                         char *nnn = new char[500];
