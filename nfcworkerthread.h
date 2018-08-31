@@ -41,6 +41,7 @@ private:
     void getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen);
 
 
+    void getFirmwareVersion(SCARDCONTEXT &hSC, QString rName);
     void getAutoPICCPolling(SCARDCONTEXT &hSC, QString rName);
     void buzzerSetCtrl(SCARDCONTEXT &hSC, QString rName, uint8_t buzDuration);
     void buzzerGetStatus(SCARDCONTEXT &hSC, QString rName);
