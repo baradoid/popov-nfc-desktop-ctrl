@@ -4,7 +4,7 @@
 
 #if defined(Q_OS_LINUX)
 #include <PCSC/winscard.h>
-#define SCARD_CTL_CODE(code) (0x42000000+(code-100))
+#define SCARD_CTL_CODE(code) (0x42000000+code)
 
 #define SCdConn SCardConnect
 #define SCARD_READERSTATE_def SCARD_READERSTATE
