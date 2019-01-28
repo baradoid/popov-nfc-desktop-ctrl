@@ -28,6 +28,12 @@ Dialog::Dialog(QWidget *parent) :
 
     ui->lineEditTcpClientsCount->setText("0");
 
+
+    QString contactHandle = settings.value("contactHandle").toString();
+    ui->lineEditStartOnContact->setText(contactHandle);
+    QString longContactHandle = settings.value("longContactHandle").toString();
+    ui->lineEditStartOnLongContact->setText(longContactHandle);
+
     tcpServ = new QTcpServer(this);
     connect(tcpServ, SIGNAL(newConnection()), this, SLOT(handleNewTcpConnection()));
     if(tcpServ->listen(QHostAddress::Any, port) == true){
@@ -92,6 +98,7 @@ Dialog::Dialog(QWidget *parent) :
     Pal.setColor(QPalette::Background, Qt::red);
     ui->widgetIndic->setAutoFillBackground(true);
     ui->widgetIndic->setPalette(Pal);
+
 }
 
 Dialog::~Dialog()
@@ -105,6 +112,11 @@ Dialog::~Dialog()
     int longPressThresh = ui->lineEditLongPressDelta->text().toInt();
     settings.setValue("longPressThresh", longPressThresh);
 
+
+    QString contactHandle = ui->lineEditStartOnContact->text();
+    settings.setValue("contactHandle", contactHandle);
+    QString longContactHandle = ui->lineEditStartOnLongContact->text();
+    settings.setValue("longContactHandle", longContactHandle);
 
     delete ui;
 }
