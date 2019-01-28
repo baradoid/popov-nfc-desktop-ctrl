@@ -1,5 +1,6 @@
 #include "dialog.h"
 #include "ui_dialog.h"
+#include <QProcess>
 
 Dialog::Dialog(QWidget *parent) :
     QDialog(parent),
@@ -346,7 +347,7 @@ void Dialog::timeout()
                         tcd->uidStr = uidStr;
                         tcd->uidBytesLen = dwrecv - 2;
                         tcd->bSeenOnLastPoll = false;
-                        lwi->setData(Qt::UserRole, (int)tcd);
+                        lwi->setData(Qt::UserRole, (quint64)tcd);
 
                     }
 
@@ -360,6 +361,8 @@ void Dialog::timeout()
                         if(prcnt > 100){
                             prcnt = 100;
                             Pal.setColor(QPalette::Background, Qt::blue);
+                            addLogString(QString("handle long contact: + \"") + ui->lineEditStartOnLongContact->text() + QString("\""));
+                            QProcess::startDetached(ui->lineEditStartOnLongContact->text());
                         }
                         qDebug("delta: %d %d", deltaElapsed, prcnt);
                         ui->progressBar->setValue(prcnt);
@@ -505,7 +508,7 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
         tcd->uidStr = uidStr;
         tcd->uidBytesLen = uidLen - 2;
         tcd->bSeenOnLastPoll = false;
-        lwi->setData(Qt::UserRole, (int)tcd);
+        lwi->setData(Qt::UserRole, (quint64)tcd);
     }
 
     curTcd = tcd;
@@ -550,12 +553,8 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
 
 void Dialog::handleCardRemoved()
 {
-
     qDebug("handleCardRemoved");
     progressTime.stop();
-
-
-
 
     for(int i=0; i<ui->listWidget->count(); i++){
         QListWidgetItem *wi = ui->listWidget->item(i);
@@ -563,9 +562,12 @@ void Dialog::handleCardRemoved()
         if(tc->bSeenOnLastPoll == true){
             for(int i=0; i<clientSockList.size(); i++){
                 clientSockList[i]->write(qPrintable(tc->uidStr+" "));
-                clientSockList[i]->write(qPrintable(QString::number(0)+"\n\n"));
+                clientSockList[i]->write(qPrintable(QString::number(0)+"\n\n"));                                
             }
+            addLogString(QString("handle contact: + \"") + ui->lineEditStartOnContact->text() + QString("\""));
+            QProcess::startDetached(ui->lineEditStartOnContact->text());
         }
+
         tc->bSeenOnLastPoll = false;
     }
     ui->progressBar->setValue(0);
@@ -611,3 +613,9 @@ void Dialog::addLogString(QString s)
 
 }
 
+
+//void Dialog::on_pushButton_clicked()
+//{
+//    QProcess::startDetached(ui->lineEditStartOnContact->text());
+
+//}

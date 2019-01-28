@@ -81,6 +81,7 @@ private slots:
     void handleCardRemoved();
     void handleProgressTick();
     void addLogString(QString);
+//    void on_pushButton_clicked();
 };
 
 
