@@ -373,8 +373,10 @@ void Dialog::timeout()
                         if(prcnt > 100){
                             prcnt = 100;
                             Pal.setColor(QPalette::Background, Qt::blue);
-                            addLogString(QString("handle long contact: + \"") + ui->lineEditStartOnLongContact->text() + QString("\""));
-                            QProcess::startDetached(ui->lineEditStartOnLongContact->text());
+
+                            QString startStr =QString(ui->lineEditStartOnContact->text()).arg(tc->uidStr);
+                            addLogString(QString("handle long contact: + \"") + startStr + QString("\""));
+                            QProcess::startDetached(startStr);
                         }
                         qDebug("delta: %d %d", deltaElapsed, prcnt);
                         ui->progressBar->setValue(prcnt);
