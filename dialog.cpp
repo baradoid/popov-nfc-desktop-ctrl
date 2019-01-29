@@ -576,8 +576,10 @@ void Dialog::handleCardRemoved()
                 clientSockList[i]->write(qPrintable(tc->uidStr+" "));
                 clientSockList[i]->write(qPrintable(QString::number(0)+"\n\n"));                                
             }
-            addLogString(QString("handle contact: + \"") + ui->lineEditStartOnContact->text() + QString("\""));
-            QProcess::startDetached(ui->lineEditStartOnContact->text());
+
+            QString startStr =QString(ui->lineEditStartOnContact->text()).arg(tc->uidStr);
+            addLogString(QString("handle contact: + \"") + startStr + QString("\""));
+            QProcess::startDetached(startStr);
         }
 
         tc->bSeenOnLastPoll = false;
@@ -631,3 +633,10 @@ void Dialog::addLogString(QString s)
 //    QProcess::startDetached(ui->lineEditStartOnContact->text());
 
 //}
+
+void Dialog::on_pushButton_clicked()
+{
+    QString startStr =QString(ui->lineEditStartOnContact->text()).arg("lala");
+    addLogString(QString("handle contact: + \"") + startStr + QString("\""));
+    QProcess::startDetached(startStr);
+}

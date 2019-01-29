@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>494</width>
-    <height>288</height>
+    <height>296</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -276,7 +276,7 @@
             <item>
              <widget class="QLabel" name="label_5">
               <property name="text">
-               <string>on contact:</string>
+               <string>on contact (%1 - UID):</string>
               </property>
              </widget>
             </item>

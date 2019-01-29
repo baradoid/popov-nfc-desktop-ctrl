@@ -82,6 +82,7 @@ private slots:
     void handleProgressTick();
     void addLogString(QString);
 //    void on_pushButton_clicked();
+    void on_pushButton_clicked();
 };
 
 
