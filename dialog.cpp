@@ -374,7 +374,7 @@ void Dialog::timeout()
                             prcnt = 100;
                             Pal.setColor(QPalette::Background, Qt::blue);
 
-                            QString startStr =QString(ui->lineEditStartOnContact->text()).arg(tc->uidStr);
+                            QString startStr =QString(ui->lineEditStartOnContact->text()).arg(tcd->uidStr);
                             addLogString(QString("handle long contact: + \"") + startStr + QString("\""));
                             QProcess::startDetached(startStr);
                         }
