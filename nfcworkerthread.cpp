@@ -2,13 +2,74 @@
 #include <QDebug>
 #include "nfcworkerthread.h"
 
+#include <nfc/nfc.h>
+#include <nfc/nfc-types.h>
+//#include "utils/nfc-utils.h"
 
 NfcWorkerThread::NfcWorkerThread(QObject* p): QThread(p)
 {
 
 }
 
+void NfcWorkerThread::libNfcInit()
+{
+    nfc_context *context;
+    nfc_device *pnd = NULL;
 
+    nfc_init(&context);
+    if(context == NULL){
+        qDebug() << qPrintable("unable to init libnfc (malloc)");
+    }
+
+    pnd = nfc_open(context, NULL);
+    if(pnd == NULL){
+        qDebug() << qPrintable("unable to open NFC device");
+        nfc_exit(context);
+    }
+
+    if(nfc_initiator_init(pnd) < 0){
+        nfc_perror(pnd, "nfc_initiator_init");
+        nfc_close(pnd);
+        nfc_exit(context);
+    }
+
+    uint8_t uiPollNr = 20;
+    uint8_t uiPeriod = 2;
+    nfc_modulation nmModulations[5] = {
+        {.nmt = NMT_ISO14443A, .nbr = NBR_106},
+        {.nmt = NMT_ISO14443B, .nbr = NBR_106},
+        {.nmt = NMT_FELICA, .nbr = NBR_212},
+        {.nmt = NMT_FELICA, .nbr = NBR_424},
+        {.nmt = NMT_JEWEL, .nbr = NBR_106},
+    };
+    size_t szModulations = 5;
+    nfc_target nt;
+    int res = 0;
+
+    qDebug() << qPrintable(QString("NFC reader: %1 opened").arg(nfc_device_get_name(pnd)));
+    QString debStr = QString("NFC device will poll during");
+    qDebug() << qPrintable("NFC device will poll during");
+
+    if((res = nfc_initiator_poll_target(pnd, nmModulations, szModulations, uiPollNr, uiPeriod, &nt)) < 0){
+        nfc_perror(pnd, "nfc_initiator_poll_target");
+        nfc_close(pnd);
+        nfc_exit(context);
+    }
+
+    if(res > 0){
+        //print_nfc_target(&nt, true);
+        qDebug() << qPrintable("Waiting for card removing...");
+        while(0 == nfc_initiator_target_is_present(pnd, NULL)) {}
+        nfc_perror(pnd, "nfc_initiator_target_is_present");
+        qDebug() << qPrintable("done.");
+    }
+    else{
+        qDebug() << qPrintable("No target found.");
+    }
+    nfc_close(pnd);
+    nfc_exit(context);
+
+}
 
 void NfcWorkerThread::run() {
 
@@ -23,6 +84,8 @@ void NfcWorkerThread::run() {
     //LONG            lReturn;
     initContext(&hSC);
     int nbReaders = 0;
+
+    libNfcInit();
 
 
 //    getReadersList(&hSC, &readerList);
