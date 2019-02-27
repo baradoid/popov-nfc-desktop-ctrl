@@ -24,13 +24,15 @@ void LibNfcWorkerThread::run()
     pnd = nfc_open(context, NULL);
     if(pnd == NULL){
         qDebug() << qPrintable("unable to open NFC device");
-        nfc_exit(context);
+        //nfc_exit(context);
+        return;
     }
 
     if(nfc_initiator_init(pnd) < 0){
         nfc_perror(pnd, "nfc_initiator_init");
         nfc_close(pnd);
-        nfc_exit(context);
+        return;
+        //nfc_exit(context);
     }
 
     uint8_t uiPollNr = 1;
