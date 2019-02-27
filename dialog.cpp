@@ -96,7 +96,7 @@ Dialog::Dialog(QWidget *parent) :
 
 #if defined(Q_OS_LINUX)
     lw = new LibNfcWorkerThread(this);
-    connect(lw, &NfcWorkerThread::finished, w, &QObject::deleteLater);
+    connect(lw, &NfcWorkerThread::finished, lw, &QObject::deleteLater);
     connect(lw, SIGNAL(debugMsg(QString)), this, SLOT(addLogString(QString)));
 
     connect(lw, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64,quint8)));
