@@ -48,5 +48,4 @@ private:
     void ledBuzIndSet(SCARDCONTEXT &hSC, QString rName, bool bEventBuzzer);
     void ledBuzIndGetStatus(SCARDCONTEXT &hSC, QString rName);
 
-    void libNfcInit();
 };

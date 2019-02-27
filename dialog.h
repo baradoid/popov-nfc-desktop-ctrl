@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <nfcworkerthread.h>
+#include <libnfcworkerthread.h>
 
 
 namespace Ui {
@@ -68,6 +69,7 @@ private:
 
     //QThread workerThread;
     NfcWorkerThread *w;
+    LibNfcWorkerThread *lw;
 
     QTimer progressTime;
     TCardDescription *curTcd;

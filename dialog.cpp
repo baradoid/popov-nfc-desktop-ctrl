@@ -94,6 +94,14 @@ Dialog::Dialog(QWidget *parent) :
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
 
+    lw = new LibNfcWorkerThread(this);
+    connect(lw, &NfcWorkerThread::finished, w, &QObject::deleteLater);
+    connect(lw, SIGNAL(debugMsg(QString)), this, SLOT(addLogString(QString)));
+
+    connect(lw, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64,quint8)));
+    connect(lw, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
+    lw->start();
+
     QPalette Pal(palette());
     Pal.setColor(QPalette::Background, Qt::red);
     ui->widgetIndic->setAutoFillBackground(true);
@@ -103,6 +111,9 @@ Dialog::Dialog(QWidget *parent) :
 
 Dialog::~Dialog()
 {
+    lw->requestInterruption();
+    lw->wait();
+
     w->requestInterruption();
     w->wait();
 
@@ -579,9 +590,28 @@ void Dialog::handleCardRemoved()
                 clientSockList[i]->write(qPrintable(QString::number(0)+"\n\n"));                                
             }
 
-            QString startStr =QString(ui->lineEditStartOnContact->text()).arg(tc->uidStr);
-            addLogString(QString("handle contact: + \"") + startStr + QString("\""));
-            QProcess::startDetached(startStr);
+            int deltaElapsed = tc->currentSessionStart.elapsed();
+            int deltaThresh = ui->lineEditLongPressDelta->text().toInt();
+            int prcnt = ((float)deltaElapsed/deltaThresh)*100;
+            if(prcnt >= 100){
+                prcnt = 100;
+
+                QString startStr = ui->lineEditStartOnLongContact->text();
+                if(startStr.isEmpty() == false){
+                    startStr = QString(startStr).arg(tc->uidStr);
+                    addLogString(QString("handle long contact: + \"") + startStr + QString("\""));
+                    QProcess::startDetached(startStr);
+                }
+            }
+            else{
+                QString startStr = ui->lineEditStartOnContact->text();
+                if(startStr.isEmpty() == false){
+                    startStr = QString(startStr).arg(tc->uidStr);
+                    addLogString(QString("handle short contact: + \"") + startStr + QString("\""));
+                    QProcess::startDetached(startStr);
+                }
+            }
+
         }
 
         tc->bSeenOnLastPoll = false;

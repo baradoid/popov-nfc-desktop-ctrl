@@ -26,11 +26,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         dialog.cpp \
-    nfcworkerthread.cpp
+    nfcworkerthread.cpp \
+    libnfcworkerthread.cpp
 
 HEADERS += \
         dialog.h \
-    nfcworkerthread.h
+    nfcworkerthread.h \
+    libnfcworkerthread.h
 
 FORMS += \
         dialog.ui
