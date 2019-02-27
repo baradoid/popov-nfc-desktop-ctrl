@@ -276,7 +276,7 @@
             <item>
              <widget class="QLabel" name="label_5">
               <property name="text">
-               <string>on contact (%1 - UID):</string>
+               <string>on short contact (%1 - UID):</string>
               </property>
              </widget>
             </item>
@@ -298,7 +298,7 @@
             <item>
              <widget class="QLabel" name="label_6">
               <property name="text">
-               <string>on l contact:</string>
+               <string>on long contact:</string>
               </property>
              </widget>
             </item>

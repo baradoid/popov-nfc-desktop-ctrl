@@ -15,8 +15,10 @@
 
 #include <stdint.h>
 #include <nfcworkerthread.h>
-#include <libnfcworkerthread.h>
 
+#ifdef __linux__
+#include <libnfcworkerthread.h>
+#endif
 
 namespace Ui {
 class Dialog;
@@ -69,7 +71,9 @@ private:
 
     //QThread workerThread;
     NfcWorkerThread *w;
+#ifdef __linux__
     LibNfcWorkerThread *lw;
+#endif
 
     QTimer progressTime;
     TCardDescription *curTcd;

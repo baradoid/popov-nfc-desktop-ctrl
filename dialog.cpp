@@ -94,6 +94,7 @@ Dialog::Dialog(QWidget *parent) :
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
 
+#ifdef __linux__
     lw = new LibNfcWorkerThread(this);
     connect(lw, &NfcWorkerThread::finished, w, &QObject::deleteLater);
     connect(lw, SIGNAL(debugMsg(QString)), this, SLOT(addLogString(QString)));
@@ -101,6 +102,7 @@ Dialog::Dialog(QWidget *parent) :
     connect(lw, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64,quint8)));
     connect(lw, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     lw->start();
+#endif
 
     QPalette Pal(palette());
     Pal.setColor(QPalette::Background, Qt::red);
@@ -111,8 +113,10 @@ Dialog::Dialog(QWidget *parent) :
 
 Dialog::~Dialog()
 {
+#ifdef __linux__
     lw->requestInterruption();
     lw->wait();
+#endif
 
     w->requestInterruption();
     w->wait();
