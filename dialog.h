@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <nfcworkerthread.h>
 
-#ifdef __linux__
+#if defined(Q_OS_LINUX)
 #include <libnfcworkerthread.h>
 #endif
 
@@ -71,7 +71,7 @@ private:
 
     //QThread workerThread;
     NfcWorkerThread *w;
-#ifdef __linux__
+#if defined(Q_OS_LINUX)
     LibNfcWorkerThread *lw;
 #endif
 

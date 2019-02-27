@@ -94,7 +94,7 @@ Dialog::Dialog(QWidget *parent) :
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
 
-#ifdef __linux__
+#if defined(Q_OS_LINUX)
     lw = new LibNfcWorkerThread(this);
     connect(lw, &NfcWorkerThread::finished, w, &QObject::deleteLater);
     connect(lw, SIGNAL(debugMsg(QString)), this, SLOT(addLogString(QString)));
@@ -113,7 +113,7 @@ Dialog::Dialog(QWidget *parent) :
 
 Dialog::~Dialog()
 {
-#ifdef __linux__
+#if defined(Q_OS_LINUX)
     lw->requestInterruption();
     lw->wait();
 #endif
