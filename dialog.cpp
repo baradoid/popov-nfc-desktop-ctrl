@@ -580,6 +580,12 @@ void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
     ui->widgetIndic->setAutoFillBackground(true);
     ui->widgetIndic->setPalette(Pal);
 
+    QString startStr = ui->lineEditStartOnContact->text();
+    if(startStr.isEmpty() == false){
+        startStr = QString(startStr).arg(tcd->uidStr);
+        addLogString(QString("handle short contact: + \"") + startStr + QString("\""));
+        QProcess::startDetached(startStr);
+    }
 }
 
 void Dialog::handleCardRemoved()
@@ -610,12 +616,12 @@ void Dialog::handleCardRemoved()
                 }
             }
             else{
-                QString startStr = ui->lineEditStartOnContact->text();
-                if(startStr.isEmpty() == false){
-                    startStr = QString(startStr).arg(tc->uidStr);
-                    addLogString(QString("handle short contact: + \"") + startStr + QString("\""));
-                    QProcess::startDetached(startStr);
-                }
+//                QString startStr = ui->lineEditStartOnContact->text();
+//                if(startStr.isEmpty() == false){
+//                    startStr = QString(startStr).arg(tc->uidStr);
+//                    addLogString(QString("handle short contact: + \"") + startStr + QString("\""));
+//                    QProcess::startDetached(startStr);
+//                }
             }
 
         }
