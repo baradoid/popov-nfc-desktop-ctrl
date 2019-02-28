@@ -243,6 +243,7 @@ void NfcWorkerThread::run() {
 
 
 
+        msleep(20);
     }
     //qDebug("quit thread");
     //emit resultReady(result);
