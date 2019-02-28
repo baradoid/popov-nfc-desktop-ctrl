@@ -113,14 +113,6 @@ Dialog::Dialog(QWidget *parent) :
 
 Dialog::~Dialog()
 {
-#if defined(Q_OS_LINUX)
-    lw->requestInterruption();
-    lw->wait();
-#endif
-
-    w->requestInterruption();
-    w->wait();
-
     int port = ui->lineEditPort->text().toInt();
     settings.setValue("port", port);
 
@@ -132,6 +124,16 @@ Dialog::~Dialog()
     settings.setValue("contactHandle", contactHandle);
     QString longContactHandle = ui->lineEditStartOnLongContact->text();
     settings.setValue("longContactHandle", longContactHandle);
+
+#if defined(Q_OS_LINUX)
+    if(lw->isRunning()){
+        lw->requestInterruption();
+        lw->wait();
+    }
+#endif
+
+    w->requestInterruption();
+    w->wait();
 
     delete ui;
 }
@@ -675,4 +677,12 @@ void Dialog::on_pushButton_clicked()
     QString startStr =QString(ui->lineEditStartOnContact->text()).arg("lala");
     addLogString(QString("handle contact: + \"") + startStr + QString("\""));
     QProcess::startDetached(startStr);
+}
+
+void Dialog::on_pushButtonSaveConfig_clicked()
+{
+    QString contactHandle = ui->lineEditStartOnContact->text();
+    settings.setValue("contactHandle", contactHandle);
+    QString longContactHandle = ui->lineEditStartOnLongContact->text();
+    settings.setValue("longContactHandle", longContactHandle);
 }

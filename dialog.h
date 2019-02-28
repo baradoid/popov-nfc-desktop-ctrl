@@ -89,6 +89,7 @@ private slots:
     void addLogString(QString);
 //    void on_pushButton_clicked();
     void on_pushButton_clicked();
+    void on_pushButtonSaveConfig_clicked();
 };
 
 

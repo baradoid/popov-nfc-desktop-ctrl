@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>494</width>
-    <height>296</height>
+    <height>449</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -265,6 +265,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>Actions (%1 - UID):</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QWidget" name="widget_6" native="true">
            <layout class="QHBoxLayout" name="horizontalLayout">
             <property name="topMargin">
@@ -276,7 +286,7 @@
             <item>
              <widget class="QLabel" name="label_5">
               <property name="text">
-               <string>on short contact (%1 - UID):</string>
+               <string>on short contact:</string>
               </property>
              </widget>
             </item>
@@ -310,6 +320,13 @@
              </widget>
             </item>
            </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonSaveConfig">
+           <property name="text">
+            <string>save config</string>
+           </property>
           </widget>
          </item>
          <item>
