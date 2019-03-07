@@ -1,0 +1,8 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+Exec=mate-terminal --working-directory="/home/rb/popov-nfc-desktop-ctrl" -e "sh -c \\"git pull&&qmake&&make&&./popov-nfc-desktop-ctrl\\""
+Name=NFC Control
+Comment=auto update qt program
+Icon=/usr/share/pixmaps/gksu-root-terminal.png
+
