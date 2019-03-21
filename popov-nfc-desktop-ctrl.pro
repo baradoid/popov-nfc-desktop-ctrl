@@ -23,16 +23,28 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 
+unix{
 SOURCES += \
         main.cpp \
         dialog.cpp \
     nfcworkerthread.cpp\
-    libnfcworkerthread.cpp
+     libnfcworkerthread.cpp
 
 HEADERS += \
         dialog.h \
-    nfcworkerthread.h\
+    nfcworkerthread.h \
     libnfcworkerthread.h
+}
+win32{
+SOURCES += \
+        main.cpp \
+        dialog.cpp \
+    nfcworkerthread.cpp
+
+HEADERS += \
+        dialog.h \
+    nfcworkerthread.h
+}
 
 
 FORMS += \
