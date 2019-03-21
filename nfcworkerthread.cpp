@@ -369,7 +369,7 @@ uint32_t NfcWorkerThread::getReadersList(SCARDCONTEXT *phSC, QStringList *reader
     return lReturn;
 }
 
-void NfcWorkerThread::getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen)
+void NfcWorkerThread::getUID(SCARDCONTEXT &hSC, QString rName, quint64 &uid, quint8 &uidLen)
 {
     LONG lReturn;
     SCARDHANDLE hCardHandle;

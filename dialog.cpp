@@ -90,7 +90,7 @@ Dialog::Dialog(QWidget *parent) :
     connect(w, &NfcWorkerThread::finished, w, &QObject::deleteLater);
     connect(w, SIGNAL(debugMsg(QString)), this, SLOT(addLogString(QString)));
 
-    connect(w, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64,quint8)));
+    connect(w, SIGNAL(cardDetected(quint64,quint8)), this, SLOT(handleCardDetected(quint64, quint8)));
     connect(w, SIGNAL(cardRemoved()), this, SLOT(handleCardRemoved()));
     w->start();
 
@@ -502,6 +502,7 @@ void Dialog::handleNewTcpConnection()
 
 void Dialog::handleCardDetected(quint64 uid, quint8 uidLen)
 {
+    qDebug("handleCardDetected");
     QString uidStr;
     if(uidLen == 9)
         uidStr.sprintf("0x%014llX", uid);

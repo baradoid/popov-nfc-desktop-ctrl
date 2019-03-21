@@ -38,7 +38,7 @@ signals:
 private:
     uint32_t initContext(SCARDCONTEXT *phSC);
     uint32_t getReadersList(SCARDCONTEXT *phSC, QStringList *readerList);
-    void getUID(SCARDCONTEXT &hSC, QString rName, uint64_t &uid, quint8 &uidLen);
+    void getUID(SCARDCONTEXT &hSC, QString rName, quint64 &uid, quint8 &uidLen);
 
 
     void getFirmwareVersion(SCARDCONTEXT &hSC, QString rName);
